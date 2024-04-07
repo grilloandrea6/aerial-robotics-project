@@ -4,13 +4,6 @@ import matplotlib.pyplot as plt
 import time
 import cv2
 
-# Global variables
-on_ground = True
-height_desired = 1.0
-timer = None
-startpos = None
-timer_done = None
-
 # All available ground truth measurements can be accessed by calling sensor_data[item], where "item" can take the following values:
 # "x_global": Global X position
 # "y_global": Global Y position
@@ -37,132 +30,208 @@ timer_done = None
 # "rate_pitch": Pitch rate (rad/s)
 # "rate_yaw": Yaw rate (rad/s)
 
+
+init = False
+
+STATE_ON_GROUND = 0
+STATE_FORWARD = 1
+STATE_SEARCH_PAD = 2
+STATE_STOP = 3
+
+CRUISE_HEIGHT = 1
+LANDING_GOAL = np.array([6.,.5])
+MAX_X     = 5.0 # meter
+MAX_Y     = 3.0 # meter
+RANGE_MAX = 2.0 # meter, maximum range of distance sensor
+RES_POS   = 0.05 # meter
+CONF      = 0.2 # certainty given by each measurement
+
+DIST_THRESH = 0.1
+
+ATTRACTIVE_GAIN  = 0.7
+REPULSIVE_GAIN   = 0.75
+REPULSIVE_RADIUS = 0.7
+
+KP = .4
+MAX_VEL = 1
+
+YAW_RATE = 1.3
+
+
 # This is the main function where you will implement your control algorithm
 def get_command(sensor_data, camera_data, dt):
-    global on_ground, startpos
+    global init, control
+
+    if not init:
+        control = Control()
+        init = True
 
     # Open a window to display the camera image
     # NOTE: Displaying the camera image will slow down the simulation, this is just for testing
-    # cv2.imshow('Camera Feed', camera_data)
-    # cv2.waitKey(1)
-    
-    # Take off
-    if startpos is None:
-        startpos = [sensor_data['x_global'], sensor_data['y_global'], sensor_data['z_global']]    
-    if on_ground and sensor_data['range_down'] < 0.49:
-        control_command = [0.0, 0.0, height_desired, 0.0]
-        return control_command
-    else:
-        on_ground = False
+    #cv2.imshow('Camera Feed', camera_data)
+    #cv2.waitKey(1)
 
-    # ---- YOUR CODE HERE ----
-    control_command = [0.0, 0.0, height_desired, 1.0]
-    on_ground = False
-    # map = occupancy_map(sensor_data)
-    
-    return control_command # [vx, vy, alt, yaw_rate]
+    return control.get_command(sensor_data, camera_data, dt)
 
 
-# Occupancy map based on distance sensor
-min_x, max_x = 0, 5.0 # meter
-min_y, max_y = 0, 5.0 # meter
-range_max = 2.0 # meter, maximum range of distance sensor
-res_pos = 0.2 # meter
-conf = 0.2 # certainty given by each measurement
-t = 0 # only for plotting
+class Control:
+    def __init__(self):
+        self.timer = None
+        self.startpos = None
+        self.timer_done = None
+        self.state = STATE_ON_GROUND
+        self.map = np.zeros((int(MAX_X/RES_POS), int(MAX_Y/RES_POS))) # 0 = unknown, 1 = free, -1 = occupied
+        self.t = 0
 
-map = np.zeros((int((max_x-min_x)/res_pos), int((max_y-min_y)/res_pos))) # 0 = unknown, 1 = free, -1 = occupied
 
-def occupancy_map(sensor_data):
-    global map, t
-    pos_x = sensor_data['x_global']
-    pos_y = sensor_data['y_global']
-    yaw = sensor_data['yaw']
-    
-    for j in range(4): # 4 sensors
-        yaw_sensor = yaw + j*np.pi/2 #yaw positive is counter clockwise
-        if j == 0:
-            measurement = sensor_data['range_front']
-        elif j == 1:
-            measurement = sensor_data['range_left']
-        elif j == 2:
-            measurement = sensor_data['range_back']
-        elif j == 3:
-            measurement = sensor_data['range_right']
+    def get_command(self, sensor_data, camera_data, dt):
+        # Take off
+        print(f"state: {self.state}")
+        if self.startpos is None:
+            self.startpos = [sensor_data['x_global'], sensor_data['y_global'], sensor_data['z_global']]
+
+        current_pos = np.array([sensor_data['x_global'], sensor_data['y_global']]) #, sensor_data['yaw']])
+
+        if self.state == STATE_ON_GROUND:
+            self.occupancy_map(sensor_data)
+
+            if sensor_data['range_down'] > 0.9*CRUISE_HEIGHT:
+                self.state += 1
+            control_command = [0.0, 0.0, CRUISE_HEIGHT, YAW_RATE if sensor_data['range_down'] > 0.4*CRUISE_HEIGHT else 0]
+            return control_command
+
+        if self.state == STATE_FORWARD:
+            self.occupancy_map(sensor_data)
+
+            if current_pos[0] > 4.5: #self.dist(LANDING_GOAL, current_pos) < DIST_THRESH:
+                control_command = [0.0, 0.0, CRUISE_HEIGHT, 0.0]
+                self.state = STATE_STOP
+                return control_command
+            
+            cmd = self.calculate_navigation_direction(self.map, LANDING_GOAL, current_pos)
+            cmd = self.rotate(cmd[0], cmd[1],-sensor_data['yaw'])
+
+            #print(current_pos, cmd)
+            cmd = (cmd/np.linalg.norm(cmd)) * min(MAX_VEL, KP*np.linalg.norm(cmd))
+
+
+            if min(MAX_VEL, KP*np.linalg.norm(cmd)) == MAX_VEL:
+                print("limiting")
+            control_command = [cmd[0], cmd[1], CRUISE_HEIGHT, YAW_RATE]
+            return control_command
+            
+        if self.state == STATE_STOP:
+            cmd = [0.0, 0.0, CRUISE_HEIGHT, 0.0]
+            print(current_pos, cmd)
+
+            return cmd
+
         
-        for i in range(int(range_max/res_pos)): # range is 2 meters
-            dist = i*res_pos
-            idx_x = int(np.round((pos_x - min_x + dist*np.cos(yaw_sensor))/res_pos,0))
-            idx_y = int(np.round((pos_y - min_y + dist*np.sin(yaw_sensor))/res_pos,0))
+        # vx,vy = self.rotate(navigation_direction[0],navigation_direction[1],-yaw)
+        # #desired_vx, desired_vy, desired_alt, desired_yaw_rate = command[0], command[1], command[2], command[3]
 
-            # make sure the current_setpoint is within the map
-            if idx_x < 0 or idx_x >= map.shape[0] or idx_y < 0 or idx_y >= map.shape[1] or dist > range_max:
-                break
-
-            # update the map
-            if dist < measurement:
-                map[idx_x, idx_y] += conf
-            else:
-                map[idx_x, idx_y] -= conf
-                break
+        # control_command = [vx/1.5, vy/1.5, CRUISE_HEIGHT, 0.0]
+        
+        return control_command # [vx, vy, alt, yaw_rate]
     
-    map = np.clip(map, -1, 1) # certainty can never be more than 100%
 
-    # only plot every Nth time step (comment out if not needed)
-    if t % 50 == 0:
-        plt.imshow(np.flip(map,1), vmin=-1, vmax=1, cmap='gray', origin='lower') # flip the map to match the coordinate system
-        plt.savefig("map.png")
-        plt.close()
-    t +=1
+    def calculate_navigation_direction(self, occupancy_map, goal_pos, current_pos):
+        attractive_grad = ATTRACTIVE_GAIN * (goal_pos - current_pos)
+        repulsive_grad = np.zeros_like(current_pos)
+        
 
-    return map
+        for i in range(occupancy_map.shape[0]):
+            for j in range(occupancy_map.shape[1]):
+                dist = np.linalg.norm(np.array([i, j])* RES_POS - (current_pos + np.array([0.07, 0.0])))
+
+                if dist < REPULSIVE_RADIUS and occupancy_map[i, j] < 0:
+
+                    func = (1.0 / (dist+.7) + 1.0 / REPULSIVE_RADIUS) / ((dist+.7)**2) - 1.08
+                    if func < 0:
+                        func = 0
+                        print("FUNC < 0\n\n\n\n\n")
+                        exit
+                    repulsive_grad += - occupancy_map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i, j]))
+        
+        attractive_grad[1] = 0
+        repulsive_grad[0] = 0
+        
+        if np.linalg.norm(repulsive_grad) > 2.3:
+            print("clipping repulsive")
+            repulsive_grad = repulsive_grad * 2.3 / np.linalg.norm(repulsive_grad)
+
+        total_grad = attractive_grad + repulsive_grad
+        print("cur pos", current_pos)
+        print("rep norm", np.linalg.norm(repulsive_grad), "attr norm", np.linalg.norm(attractive_grad), "tot norm", np.linalg.norm(total_grad))
+        print("rep", repulsive_grad,"attr", attractive_grad, total_grad)
+
+        return total_grad #/ np.linalg.norm(total_grad)
 
 
-# Control from the exercises
-index_current_setpoint = 0
-def path_to_setpoint(path,sensor_data,dt):
-    global on_ground, height_desired, index_current_setpoint, timer, timer_done, startpos
+    def dist(self, pos1, pos2):
+        return np.sqrt((pos1[0]-pos2[0])**2 + (pos1[1]-pos2[1])**2)
 
-    # Take off
-    if startpos is None:
-        startpos = [sensor_data['x_global'], sensor_data['y_global'], sensor_data['z_global']]    
-    if on_ground and sensor_data['z_global'] < 0.49:
-        current_setpoint = [startpos[0], startpos[1], height_desired, 0.0]
-        return current_setpoint
-    else:
-        on_ground = False
+    def rotate(self, x, y, angle):
+        x_prime = x * np.cos(angle) - y * np.sin(angle)
+        y_prime = x * np.sin(angle) + y * np.cos(angle)
+        return np.array([x_prime, y_prime])
 
-    # Start timer
-    if (index_current_setpoint == 1) & (timer is None):
-        timer = 0
-        print("Time recording started")
-    if timer is not None:
-        timer += dt
-    # Hover at the final setpoint
-    if index_current_setpoint == len(path):
-        # Uncomment for KF
-        control_command = [startpos[0], startpos[1], startpos[2]-0.05, 0.0]
+    def occupancy_map(self, sensor_data):
+        pos_x = sensor_data['x_global']
+        pos_y = sensor_data['y_global']
+        yaw = sensor_data['yaw']
+        
+        for j in range(4): # 4 sensors
+            yaw_sensor = yaw + j*np.pi/2 #yaw positive is counter clockwise
+            if j == 0:
+                measurement = sensor_data['range_front']
+            elif j == 1:
+                measurement = sensor_data['range_left']
+            elif j == 2:
+                measurement = sensor_data['range_back']
+            elif j == 3:
+                measurement = sensor_data['range_right']
+            
+            for i in range(int(RANGE_MAX / RES_POS)): # range is 2 meters
+                dist = i*RES_POS
+                idx_x = int(np.round((pos_x + dist*np.cos(yaw_sensor))/RES_POS,0))
+                idx_y = int(np.round((pos_y + dist*np.sin(yaw_sensor))/RES_POS,0))
 
-        if timer_done is None:
-            timer_done = True
-            print("Path planing took " + str(np.round(timer,1)) + " [s]")
-        return control_command
+                # make sure the current_setpoint is within the map
+                if idx_x < 0 or idx_x >= self.map.shape[0] or idx_y < 0 or idx_y >= self.map.shape[1] or dist > RANGE_MAX:
+                    break
 
-    # Get the goal position and drone position
-    current_setpoint = path[index_current_setpoint]
-    x_drone, y_drone, z_drone, yaw_drone = sensor_data['x_global'], sensor_data['y_global'], sensor_data['z_global'], sensor_data['yaw']
-    distance_drone_to_goal = np.linalg.norm([current_setpoint[0] - x_drone, current_setpoint[1] - y_drone, current_setpoint[2] - z_drone, clip_angle(current_setpoint[3]) - clip_angle(yaw_drone)])
+                # update the map
+                if dist < measurement:
+                    self.map[idx_x, idx_y] += CONF
+                else:
+                    self.map[idx_x, idx_y] -= CONF
+                    break
+        
+        self.map = np.clip(self.map, -1, 1) # certainty can never be more than 100%
+        # if self.t % 50 == 0:
+        #     np.savetxt("map.txt",np.flip(self.map,1))
+        #     plt.imshow(np.flip(self.map,1), vmin=-1, vmax=1, cmap='gray', origin='lower') # flip the map to match the coordinate system
+        #     plt.savefig("map.png")
+        #     plt.close()
+        #     self.t = 0 
+        # self.t += 1
 
-    # When the drone reaches the goal setpoint, e.g., distance < 0.1m
-    if distance_drone_to_goal < 0.1:
-        # Select the next setpoint as the goal position
-        index_current_setpoint += 1
-        # Hover at the final setpoint
-        if index_current_setpoint == len(path):
-            current_setpoint = [0.0, 0.0, height_desired, 0.0]
-            return current_setpoint
+    # # only plot every Nth time step (comment out if not needed)
+    # #print("occupancy",t)
+    # if t % 50 == 0:
+    #     plt.imshow(np.flip(map,1), vmin=0, vmax=1, cmap='gray', origin='lower') # flip the map to match the coordinate system
+    #     plt.savefig("map.png")
+    #     plt.close()
+    # t +=1
 
-    return current_setpoint
+    # return map
+
+# def calculate_total_potential(goal_pos, current_pos):
+#     attractive_pot = attractive_potential(goal_pos, current_pos)
+#     repulsive_pot = repulsive_potential(current_pos)
+#     return attractive_pot + repulsive_pot
+
 
 def clip_angle(angle):
     angle = angle%(2*np.pi)
