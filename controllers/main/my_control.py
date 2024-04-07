@@ -39,14 +39,14 @@ STATE_SEARCH_PAD = 2
 STATE_STOP = 3
 
 CRUISE_HEIGHT = 1
-LANDING_GOAL = np.array([6.,.5])
+LANDING_AREA_LIMIT = 4.5 # meter, to do check
+FORWARD_OBJECTIVE = LANDING_AREA_LIMIT + 0.2
 MAX_X     = 5.0 # meter
 MAX_Y     = 3.0 # meter
 RANGE_MAX = 2.0 # meter, maximum range of distance sensor
 RES_POS   = 0.05 # meter
 CONF      = 0.2 # certainty given by each measurement
 
-DIST_THRESH = 0.1
 
 ATTRACTIVE_GAIN  = 0.7
 REPULSIVE_GAIN   = 0.75
@@ -90,25 +90,26 @@ class Control:
         if self.startpos is None:
             self.startpos = [sensor_data['x_global'], sensor_data['y_global'], sensor_data['z_global']]
 
+        self.occupancy_map(sensor_data)
+
         current_pos = np.array([sensor_data['x_global'], sensor_data['y_global']]) #, sensor_data['yaw']])
 
         if self.state == STATE_ON_GROUND:
-            self.occupancy_map(sensor_data)
-
             if sensor_data['range_down'] > 0.9*CRUISE_HEIGHT:
                 self.state += 1
-            control_command = [0.0, 0.0, CRUISE_HEIGHT, YAW_RATE if sensor_data['range_down'] > 0.4*CRUISE_HEIGHT else 0]
+            
+            yaw_rate = YAW_RATE if sensor_data['range_down'] > 0.4*CRUISE_HEIGHT else 0
+
+            control_command = [0.0, 0.0, CRUISE_HEIGHT, yaw_rate]
             return control_command
 
         if self.state == STATE_FORWARD:
-            self.occupancy_map(sensor_data)
-
-            if current_pos[0] > 4.5: #self.dist(LANDING_GOAL, current_pos) < DIST_THRESH:
+            if current_pos[0] > LANDING_AREA_LIMIT: 
                 control_command = [0.0, 0.0, CRUISE_HEIGHT, 0.0]
                 self.state = STATE_STOP
                 return control_command
             
-            cmd = self.calculate_navigation_direction(self.map, LANDING_GOAL, current_pos)
+            cmd = self.calculate_navigation_direction(self.map, FORWARD_OBJECTIVE, current_pos)
             cmd = self.rotate(cmd[0], cmd[1],-sensor_data['yaw'])
 
             #print(current_pos, cmd)
@@ -135,9 +136,10 @@ class Control:
         return control_command # [vx, vy, alt, yaw_rate]
     
 
-    def calculate_navigation_direction(self, occupancy_map, goal_pos, current_pos):
-        attractive_grad = ATTRACTIVE_GAIN * (goal_pos - current_pos)
-        repulsive_grad = np.zeros_like(current_pos)
+    def calculate_navigation_direction(self, occupancy_map, goal, current_pos):
+        cmd_x = ATTRACTIVE_GAIN * (goal - current_pos[0])
+
+        cmd_y = 0
         
 
         for i in range(occupancy_map.shape[0]):
@@ -151,21 +153,11 @@ class Control:
                         func = 0
                         print("FUNC < 0\n\n\n\n\n")
                         exit
-                    repulsive_grad += - occupancy_map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i, j]))
-        
-        attractive_grad[1] = 0
-        repulsive_grad[0] = 0
-        
-        if np.linalg.norm(repulsive_grad) > 2.3:
-            print("clipping repulsive")
-            repulsive_grad = repulsive_grad * 2.3 / np.linalg.norm(repulsive_grad)
+                    rep = - occupancy_map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i, j]))
+                    cmd_y += rep[1]
 
-        total_grad = attractive_grad + repulsive_grad
-        print("cur pos", current_pos)
-        print("rep norm", np.linalg.norm(repulsive_grad), "attr norm", np.linalg.norm(attractive_grad), "tot norm", np.linalg.norm(total_grad))
-        print("rep", repulsive_grad,"attr", attractive_grad, total_grad)
 
-        return total_grad #/ np.linalg.norm(total_grad)
+        return np.array([cmd_x, cmd_y])
 
 
     def dist(self, pos1, pos2):
