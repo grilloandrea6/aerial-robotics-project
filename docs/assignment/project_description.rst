@@ -81,10 +81,10 @@ The final project grade is composed of the following weighted average of both yo
 
 System scheme
 -------------
-The data flow diagram for both the simulation and the real quadrotor is shown below.
-Though they have the same types of sensory inputs and control outputs, your algorithm in simulation should be tuned in the real world in order to control the real drone.
+The data flow diagram for both the simulation and the real quadrotor is shown below. The sensor data values that are available in both simulation and hardware are listed. Note that on the real drone, you do not have access to the camera image.
+Though your control output structure is the same, you will find that your algorithm in simulation should be tuned in the real world in order to control the real drone accurately.
 
-.. image:: sim2real_edit.png
+.. image:: sim2real_edit_new.png
   :width: 550
   :alt: sim2real
 
@@ -107,4 +107,4 @@ The following table provides the schedule of the crazy-practical project.
 | Week 14, May 28           | Hardware demonstrations, hand in the drones
 ==========================  ========================================================
 
-Any questions about the task, submission, schedule and grading, please contact Charbel Toumieh (charbel.toumieh@epfl.ch).
+Any questions about the task, submission, schedule and grading, please post on the forum. In case it is a private matter, please contact Charbel Toumieh (charbel.toumieh@epfl.ch).

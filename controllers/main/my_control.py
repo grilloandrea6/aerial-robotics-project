@@ -4,32 +4,25 @@ import matplotlib.pyplot as plt
 import time
 import cv2
 
-# All available ground truth measurements can be accessed by calling sensor_data[item], where "item" can take the following values:
+# The available ground truth state measurements can be accessed by calling sensor_data[item]. All values of "item" are provided as defined in main.py lines 296-323. 
+# The "item" values that you can later use in the hardware project are:
 # "x_global": Global X position
 # "y_global": Global Y position
-# "z_global": Global Z position
+# "range_down": Downward range finder distance (Used instead of Global Z distance)
+# "range_front": Front range finder distance
+# "range_left": Leftward range finder distance 
+# "range_right": Rightward range finder distance
+# "range_back": Backward range finder distance
 # "roll": Roll angle (rad)
 # "pitch": Pitch angle (rad)
 # "yaw": Yaw angle (rad)
-# "v_x": Global X velocity
-# "v_y": Global Y velocity
-# "v_z": Global Z velocity
-# "v_forward": Forward velocity (body frame)
-# "v_left": Leftward velocity (body frame)
-# "v_down": Downward velocity (body frame)
-# "ax_global": Global X acceleration
-# "ay_global": Global Y acceleration
-# "az_global": Global Z acceleration
-# "range_front": Front range finder distance
-# "range_down": Donward range finder distance
-# "range_left": Leftward range finder distance 
-# "range_back": Backward range finder distance
-# "range_right": Rightward range finder distance
-# "range_down": Downward range finder distance
-# "rate_roll": Roll rate (rad/s)
-# "rate_pitch": Pitch rate (rad/s)
-# "rate_yaw": Yaw rate (rad/s)
 
+# Global variables
+on_ground = True
+height_desired = 1.0
+timer = None
+startpos = None
+timer_done = None
 
 init = False
 
@@ -87,6 +80,7 @@ def detect_pink_square(frame):
     # Threshold the HSV image to get only pink colors
     mask = cv2.inRange(hsv, lower_pink, upper_pink)
     
+
     # Find contours in the mask
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     
@@ -184,7 +178,6 @@ class Control:
         print("ERROR WRONG MODE")
         return [0,0,CRUISE_HEIGHT,0] # [vx, vy, alt, yaw_rate]
     
-
     def calculate_navigation_direction_forward(self, occupancy_map, goal, current_pos):
         cmd_x = 1.25 * (goal - current_pos[0])/np.linalg.norm(goal-current_pos[0])
 
