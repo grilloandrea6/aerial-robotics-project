@@ -25,6 +25,7 @@ startpos = None
 timer_done = None
 
 init = False
+t = 0
 
 STATE_ON_GROUND = 0
 STATE_FORWARD = 1
@@ -33,8 +34,8 @@ STATE_RETURN = 3
 STATE_STOP = 4
 
 CRUISE_HEIGHT = 0.5
-LANDING_AREA_LIMIT = 4.5 # meter, to do check
-FORWARD_OBJECTIVE = LANDING_AREA_LIMIT + 0.2
+LANDING_AREA_LIMIT = 3.6 # meter, to do check
+FORWARD_OBJECTIVE = 5.0 # meter
 RETURN_OBJECTIVE = 0.
 MAX_X     = 5.0 # meter
 MAX_Y     = 3.0 # meter
@@ -102,7 +103,20 @@ class Control:
         self.startpos = None
         self.timer_done = None
         self.state = STATE_ON_GROUND
-        self.map = np.zeros((int(MAX_X/RES_POS), int(MAX_Y/RES_POS))) # 0 = unknown, 1 = free, -1 = occupied
+        self.backward_y_error = 0
+        self.backward_x_error = 0
+        self.stop_counter = 1.0
+
+        self.map = np.zeros((int(MAX_X/RES_POS)+2, int(MAX_Y/RES_POS)+2)) # 0 = unknown, 1 = free, -1 = occupied
+        rows = len(self.map)
+        cols = len(self.map[0])
+        for j in range(cols):
+            self.map[0][j] = -1
+            self.map[rows - 1][j] = -1
+        for i in range(rows):
+            self.map[i][0] = -1
+            self.map[i][cols - 1] = -1
+
         self.t = 0
 
     def get_command(self, sensor_data, camera_data, dt):
@@ -117,7 +131,7 @@ class Control:
 
         if self.state == STATE_ON_GROUND:
             if sensor_data['range_down'] > (0.9*CRUISE_HEIGHT - 0.1):
-                self.state += 1
+                self.state = STATE_FORWARD
                 print("change state ", self.state)
             
             yaw_rate = YAW_RATE if sensor_data['range_down'] > 0.4*CRUISE_HEIGHT else 0
@@ -128,7 +142,7 @@ class Control:
         if self.state == STATE_FORWARD:
             if current_pos[0] > LANDING_AREA_LIMIT: 
                 control_command = [0.0, 0.0, CRUISE_HEIGHT, 0.0]
-                self.state += 2
+                self.state = STATE_SEARCH_PAD
                 print("change state ", self.state)
                 return control_command
             
@@ -144,10 +158,15 @@ class Control:
             control_command = [cmd[0], cmd[1], CRUISE_HEIGHT, YAW_RATE]
             return control_command
         
+        if self.state == STATE_SEARCH_PAD:
+            self.state = STATE_RETURN
+            print("change state ", self.state)
+            return [0,0,CRUISE_HEIGHT,0]
+        
         if self.state == STATE_RETURN:
-            if np.linalg.norm(current_pos - self.startpos) < 0.095: 
+            if np.linalg.norm(current_pos - self.startpos) < 0.06: 
                 control_command = [0.0, 0.0, CRUISE_HEIGHT, 0.0]
-                self.state += 1
+                self.state = STATE_STOP
                 print("change state ", self.state)
                 return control_command
             
@@ -165,7 +184,14 @@ class Control:
 
             
         if self.state == STATE_STOP:
-            cmd = [0.0, 0.0, .1, 0.0]
+
+            if self.stop_counter > -0.01:
+                self.stop_counter -= 0.0006
+
+            if self.stop_counter > CRUISE_HEIGHT:
+                cmd = [0.0, 0.0, CRUISE_HEIGHT, 0.0]
+            else:
+                cmd = [0.0, 0.0, self.stop_counter, 0.0]
             #print(current_pos, cmd)
 
             return cmd
@@ -185,7 +211,7 @@ class Control:
 
         for i in range(occupancy_map.shape[0]):
             for j in range(occupancy_map.shape[1]):
-                dist = np.linalg.norm(np.array([i, j])* RES_POS - (current_pos + np.array([0.14, 0.0])))
+                dist = np.linalg.norm(np.array([i+1, j+1])* RES_POS - (current_pos + np.array([0.14, 0.0])))
 
                 if dist < REPULSIVE_RADIUS and occupancy_map[i, j] < 0:
                     b = .7
@@ -197,7 +223,7 @@ class Control:
                         func = 0
                         print("FUNC < 0\n\n\n\n\n")
                         exit
-                    rep = - occupancy_map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i, j]))/np.linalg.norm(current_pos - RES_POS*np.array([i, j]))
+                    rep = - occupancy_map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i+1, j+1]))/np.linalg.norm(current_pos - RES_POS*np.array([i+1, j+1]))
                     cmd_y += rep[1]
                     cmd_x += rep[0]/3
         return np.array([cmd_x, cmd_y])
@@ -205,23 +231,27 @@ class Control:
 
     def calculate_navigation_direction_backward(self, occupancy_map, goal, current_pos, y_pos=None):
         cmd_x = 0.85 * (goal - current_pos[0])
-        if cmd_x > 1.9:
+        if np.linalg.norm(cmd_x) > 1.3:
             print("clipping return vel")
-            cmd_x = 1.9
+            cmd_x = 1.3 * np.sign(cmd_x)
         if np.linalg.norm(cmd_x) < 0.6:
-            print("aug return vel x")
+            print("add integral to x")
+            self.backward_x_error += (goal - current_pos[0])
             cmd_x = 0.6 * np.sign(cmd_x)
+            cmd_x += 0.001 * self.backward_x_error
 
         cmd_y = 0
         if y_pos != None:
-            cmd_y = (y_pos - current_pos[1]) * 0.85
-        if np.linalg.norm(cmd_y) < 0.6:
-            print("aug return vel y")
-            cmd_y = 0.6 * np.sign(cmd_y)
+            self.backward_y_error += (y_pos - current_pos[1])
+            cmd_y = (y_pos - current_pos[1]) * 0.85 + 0.001 * self.backward_y_error
+            print("integral term: ", 0.001 * self.backward_y_error)
+        # if np.linalg.norm(cmd_y) < 0.6:
+        #     print("aug return vel y")
+        #     cmd_y = 0.6 * np.sign(cmd_y)
 
         for i in range(occupancy_map.shape[0]):
             for j in range(occupancy_map.shape[1]):
-                dist = np.linalg.norm(np.array([i, j])* RES_POS - (current_pos - np.array([0.14, 0.0])))
+                dist = np.linalg.norm(np.array([i+1, j+1])* RES_POS - (current_pos - np.array([0.14, 0.0])))
 
                 if dist < REPULSIVE_RADIUS and occupancy_map[i, j] < 0:
                     b = .7
@@ -233,8 +263,8 @@ class Control:
                         func = 0
                         print("FUNC < 0\n\n\n\n\n")
                         exit
-                    rep = - occupancy_map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i, j]))/np.linalg.norm(current_pos - RES_POS*np.array([i, j]))
-                    cmd_y += rep[1]
+                    rep = - occupancy_map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i+1, j+1]))/np.linalg.norm(current_pos - RES_POS*np.array([i+1, j+1]))
+                    cmd_y += rep[1] * .75
                     cmd_x += rep[0]/3
 
 
@@ -250,6 +280,7 @@ class Control:
         return np.array([x_prime, y_prime])
 
     def occupancy_map(self, sensor_data):
+        global t
         pos_x = sensor_data['x_global']
         pos_y = sensor_data['y_global']
         yaw = sensor_data['yaw']
@@ -267,11 +298,11 @@ class Control:
             
             for i in range(int(RANGE_MAX / RES_POS)): # range is 2 meters
                 dist = i*RES_POS
-                idx_x = int(np.round((pos_x + dist*np.cos(yaw_sensor))/RES_POS,0))
-                idx_y = int(np.round((pos_y + dist*np.sin(yaw_sensor))/RES_POS,0))
+                idx_x = int(np.round((pos_x + dist*np.cos(yaw_sensor))/RES_POS,0)) + 1
+                idx_y = int(np.round((pos_y + dist*np.sin(yaw_sensor))/RES_POS,0)) + 1
 
                 # make sure the current_setpoint is within the map
-                if idx_x < 0 or idx_x >= self.map.shape[0] or idx_y < 0 or idx_y >= self.map.shape[1] or dist > RANGE_MAX:
+                if idx_x < 1 or idx_x >= (self.map.shape[0] - 1) or idx_y < 1 or idx_y >= (self.map.shape[1]-1) or dist > RANGE_MAX:
                     break
 
                 # update the map
@@ -291,12 +322,12 @@ class Control:
         # self.t += 1
 
     # # only plot every Nth time step (comment out if not needed)
-    # #print("occupancy",t)
-    # if t % 50 == 0:
-    #     plt.imshow(np.flip(map,1), vmin=0, vmax=1, cmap='gray', origin='lower') # flip the map to match the coordinate system
-    #     plt.savefig("map.png")
-    #     plt.close()
-    # t +=1
+        #print("occupancy",t)
+        # if t % 50 == 0:
+        #     plt.imshow(np.flip(self.map,1), vmin=0, vmax=1, cmap='gray', origin='lower') # flip the map to match the coordinate system
+        #     plt.savefig("map.png")
+        #     plt.close()
+        # t +=1
 
     # return map
 
