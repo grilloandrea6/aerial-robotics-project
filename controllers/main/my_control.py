@@ -75,6 +75,32 @@ def get_command(sensor_data, camera_data, dt):
 
     return control.get_command(sensor_data, camera_data, dt)
 
+# Function to detect pink squares
+def detect_pink_square(frame):
+    # Convert frame to HSV color space
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    
+    # Define lower and upper bounds for pink color
+    lower_pink = np.array([140, 50, 50])
+    upper_pink = np.array([180, 255, 255])
+    
+    # Threshold the HSV image to get only pink colors
+    mask = cv2.inRange(hsv, lower_pink, upper_pink)
+    
+    # Find contours in the mask
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Iterate through detected contours
+    for contour in contours:
+        # Approximate the contour to a polygon
+        approx = cv2.approxPolyDP(contour, 0.04 * cv2.arcLength(contour, True), True)
+        
+        # If the polygon has 4 vertices, it's likely a square
+        if len(approx) == 4:
+            return contour
+    
+    return None
+
 
 class Control:
     def __init__(self):
@@ -84,7 +110,6 @@ class Control:
         self.state = STATE_ON_GROUND
         self.map = np.zeros((int(MAX_X/RES_POS), int(MAX_Y/RES_POS))) # 0 = unknown, 1 = free, -1 = occupied
         self.t = 0
-
 
     def get_command(self, sensor_data, camera_data, dt):
         # Take off

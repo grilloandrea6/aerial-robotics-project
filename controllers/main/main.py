@@ -508,6 +508,8 @@ if __name__ == '__main__':
                 setpoint = my_control.path_to_setpoint(path_around_arena,sensor_data,dt_ctrl)
 
             if control_style == 'keyboard':
+                # print("pink square")
+                # print(my_control.detect_pink_square(camera_data))
                 control_commands = drone.action_from_keyboard(sensor_data)
 
             # Update the drone status in simulation

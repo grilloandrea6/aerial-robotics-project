@@ -1,5 +1,6 @@
 controllers/main/map.png
 controllers/main/map.txt
+controllers/main/*.png
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
