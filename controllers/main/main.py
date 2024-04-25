@@ -11,7 +11,7 @@ import time, random
 import cv2
 
 exp_num = 3                     # 0: Coordinate Transformation, 1: PID Tuning, 2: Kalman Filter, 3: Practical
-control_style = 'keyboard'      # 'keyboard' or 'autonomous'
+control_style = 'autonomous'      # 'keyboard' or 'autonomous'
 rand_env = True                # Randomise the environment for the practical exercise
 
 path_around_arena = [[0.0, 0.0, 1.0, 0.0], [0.0, 3.0, 1.25, np.pi/2], [5.0, 3.0, 1.5, np.pi], [5.0, 0.0, 0.25, 1.5*np.pi], [0.0, 0.0, 1.0, 0.0]]
@@ -559,6 +559,8 @@ if __name__ == '__main__':
                 setpoint = my_control.path_to_setpoint(path_around_arena,sensor_data,dt_ctrl)
 
             if control_style == 'keyboard':
+                # print("pink square")
+                # print(my_control.detect_pink_square(camera_data))
                 control_commands = drone.action_from_keyboard(sensor_data)
 
             # Update the drone status in simulation
