@@ -231,20 +231,27 @@ class Control:
 
     def calculate_navigation_direction_backward(self, occupancy_map, goal, current_pos, y_pos=None):
         cmd_x = 0.85 * (goal - current_pos[0])
+        print("X - cmd_x: ", cmd_x)
         if np.linalg.norm(cmd_x) > 1.3:
             print("clipping return vel")
             cmd_x = 1.3 * np.sign(cmd_x)
-        if np.linalg.norm(cmd_x) < 0.6:
+        if np.linalg.norm(goal - current_pos[0]) < 0.45:
             print("add integral to x")
             self.backward_x_error += (goal - current_pos[0])
-            cmd_x = 0.6 * np.sign(cmd_x)
-            cmd_x += 0.001 * self.backward_x_error
+            #cmd_x = 0.6 * np.sign(cmd_x)
+            cmd_x += 0.005 * self.backward_x_error
+            print("X - integral term: ", 0.0015 * self.backward_x_error)
+        
 
         cmd_y = 0
         if y_pos != None:
-            self.backward_y_error += (y_pos - current_pos[1])
-            cmd_y = (y_pos - current_pos[1]) * 0.85 + 0.001 * self.backward_y_error
-            print("integral term: ", 0.001 * self.backward_y_error)
+            
+            cmd_y = (y_pos - current_pos[1]) * 0.85
+            print("Y - cmd_y: ", cmd_y)
+            if np.linalg.norm(y_pos - current_pos[1]) < 0.8 and np.linalg.norm(goal - current_pos[0]) < 0.45:
+                self.backward_y_error += (y_pos - current_pos[1])
+                cmd_y += 0.002 * self.backward_y_error
+                print("Y - integral term: ", 0.0015 * self.backward_y_error)
         # if np.linalg.norm(cmd_y) < 0.6:
         #     print("aug return vel y")
         #     cmd_y = 0.6 * np.sign(cmd_y)
@@ -266,7 +273,8 @@ class Control:
                     rep = - occupancy_map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i+1, j+1]))/np.linalg.norm(current_pos - RES_POS*np.array([i+1, j+1]))
                     cmd_y += rep[1] * .75
                     cmd_x += rep[0]/3
-
+        print("X - cmd_x after repulsion: ", cmd_x)
+        print("Y - cmd_y after repulsion: ", cmd_y)
 
         return np.array([cmd_x, cmd_y])
 
