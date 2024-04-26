@@ -32,6 +32,7 @@ STATE_FORWARD = 1
 STATE_SEARCH_PAD = 2
 STATE_RETURN = 3
 STATE_STOP = 4
+STATE_LAND = 5
 
 CRUISE_HEIGHT = 0.5
 LANDING_AREA_LIMIT = 3.6 # meter, to do check
@@ -42,8 +43,10 @@ MAX_Y     = 3.0 # meter
 RANGE_MAX = 2.0 # meter, maximum range of distance sensor
 RES_POS   = 0.05 # meter
 CONF      = 0.2 # certainty given by each measurement
-
-
+GRID_SEARCH_SPACING = 0.2  # meter
+SETPOINT_REMOVE_THRESHOLD = 1.0 # TODO!!!!!!
+LANDING_PAD_HEIGHT = 0.1
+SETPOINT_DIST_THRESHOLD = 0.08
 ATTRACTIVE_GAIN  = 0.7
 REPULSIVE_GAIN   = 0.47
 REPULSIVE_RADIUS = 0.7
@@ -106,6 +109,8 @@ class Control:
         self.backward_y_error = 0
         self.backward_x_error = 0
         self.stop_counter = 1.0
+        self.setpoints = self.generate_grid(3.65, 0.1, 1.5, 3.0)
+        self.setpoint_index = 0
 
         self.map = np.zeros((int(MAX_X/RES_POS)+2, int(MAX_Y/RES_POS)+2)) # 0 = unknown, 1 = free, -1 = occupied
         rows = len(self.map)
@@ -159,10 +164,48 @@ class Control:
             return control_command
         
         if self.state == STATE_SEARCH_PAD:
-            self.state = STATE_RETURN
-            print("change state ", self.state)
-            return [0,0,CRUISE_HEIGHT,0]
+            if self.setpoint_remove(self.map, np.array(self.setpoints[self.setpoint_index])):
+                print("skipping setpoint")
+                self.setpoint_index += 1
+
+            if self.setpoint_index == len(self.setpoints):
+                self.state = STATE_RETURN
+                print("change state ", self.state)
+                return [0,0,CRUISE_HEIGHT,0]
+
+            if np.linalg.norm(current_pos - np.array(self.setpoints[self.setpoint_index])) < SETPOINT_DIST_THRESHOLD:
+                print("reached setpoint, going to next one")
+                self.setpoint_index += 1
+
+            if abs(sensor_data['z_global'] - sensor_data['range_down']) > 0.08:
+                print("landing pad FOUND!!!!")
+                print("change state ", self.state)
+                self.state = STATE_LAND
+                return [0,0,CRUISE_HEIGHT,0]
+            
+            # navigate towards the setpoint
+
+            cmd = self.calculate_navigation_direction_search(self.map, self.setpoints[self.setpoint_index][0], current_pos, y_pos=self.setpoints[self.setpoint_index][1])
+            cmd = self.rotate(cmd[0], cmd[1],-sensor_data['yaw'])
+
+            cmd = (cmd/np.linalg.norm(cmd)) * min(MAX_VEL, KP*np.linalg.norm(cmd))
+
+
+            if min(MAX_VEL, KP*np.linalg.norm(cmd)) == MAX_VEL:
+                print("limiting")
+
+            print("current pos", current_pos, "current setpoint", self.setpoints[self.setpoint_index], "cmd", cmd)
+
+            control_command = [cmd[0], cmd[1], CRUISE_HEIGHT, YAW_RATE]
+
+            #self.state = STATE_RETURN
+            #print("change state ", self.state)
+            return control_command # [0,0,CRUISE_HEIGHT,0]
         
+        if self.state == STATE_LAND:
+            print("LANDING")
+            return [0,0,CRUISE_HEIGHT,0]
+
         if self.state == STATE_RETURN:
             if np.linalg.norm(current_pos - self.startpos) < 0.06: 
                 control_command = [0.0, 0.0, CRUISE_HEIGHT, 0.0]
@@ -279,6 +322,80 @@ class Control:
         return np.array([cmd_x, cmd_y])
 
 
+    def calculate_navigation_direction_search(self, occupancy_map, goal, current_pos, y_pos=None):
+        cmd_x = 0.85 * (goal - current_pos[0])
+        #print("X - cmd_x: ", cmd_x)
+        if np.linalg.norm(cmd_x) > 1.3:
+            #print("clipping return vel")
+            cmd_x = 1.3 * np.sign(cmd_x)
+        if np.linalg.norm(goal - current_pos[0]) < 0.45:
+            #print("add integral to x")
+            self.backward_x_error += (goal - current_pos[0])
+            #cmd_x = 0.6 * np.sign(cmd_x)
+            cmd_x += 0.005 * self.backward_x_error
+            #print("X - integral term: ", 0.0015 * self.backward_x_error)
+        
+
+        cmd_y = 0
+        if y_pos != None:
+            
+            cmd_y = (y_pos - current_pos[1]) * 0.85
+            #print("Y - cmd_y: ", cmd_y)
+            if np.linalg.norm(y_pos - current_pos[1]) < 0.8 and np.linalg.norm(goal - current_pos[0]) < 0.45:
+                self.backward_y_error += (y_pos - current_pos[1])
+                cmd_y += 0.002 * self.backward_y_error
+                #print("Y - integral term: ", 0.0015 * self.backward_y_error)
+        # if np.linalg.norm(cmd_y) < 0.6:
+        #     print("aug return vel y")
+        #     cmd_y = 0.6 * np.sign(cmd_y)
+
+        for i in range(occupancy_map.shape[0]):
+            for j in range(occupancy_map.shape[1]):
+                dist = np.linalg.norm(np.array([i+1, j+1])* RES_POS - current_pos)
+                                                                       
+                if dist < REPULSIVE_RADIUS and occupancy_map[i, j] < 0:
+                    b = .7
+                    a = REPULSIVE_RADIUS
+                    func = ((1.0 / (dist+b)) + (1.0 / a)) / ((dist+b)**2) - 1.08
+                    func = func/2.85
+
+                    if func < 0:
+                        func = 0
+                        print("FUNC < 0\n\n\n\n\n")
+                        exit
+                    rep = - occupancy_map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i+1, j+1]))/np.linalg.norm(current_pos - RES_POS*np.array([i+1, j+1]))
+                    cmd_y += rep[1] * .75 / 2
+                    cmd_x += rep[0]/3 / 2
+        #print("X - cmd_x after repulsion: ", cmd_x)
+        #print("Y - cmd_y after repulsion: ", cmd_y)
+
+        return np.array([cmd_x, cmd_y])
+
+
+
+
+    def setpoint_remove(self, occupancy_map, setpoint_pos):
+        cmd = [0, 0]
+        for i in range(occupancy_map.shape[0]):
+            for j in range(occupancy_map.shape[1]):
+                dist = np.linalg.norm(np.array([i+1, j+1])* RES_POS - setpoint_pos)
+
+                if dist < REPULSIVE_RADIUS and occupancy_map[i, j] < 0:
+                    b = .7
+                    a = REPULSIVE_RADIUS
+                    func = ((1.0 / (dist+b)) + (1.0 / a)) / ((dist+b)**2) - 1.08
+                    func = func/2.75
+
+                    if func < 0:
+                        func = 0
+                        print("FUNC < 0\n\n\n\n\n")
+                        exit
+                    rep = - occupancy_map[i, j] * REPULSIVE_GAIN * func * (setpoint_pos - RES_POS*np.array([i+1, j+1]))/np.linalg.norm(setpoint_pos - RES_POS*np.array([i+1, j+1]))
+                    cmd += rep
+        if np.linalg.norm(cmd) > SETPOINT_REMOVE_THRESHOLD:
+            return True
+        return False
+
     def dist(self, pos1, pos2):
         return np.sqrt((pos1[0]-pos2[0])**2 + (pos1[1]-pos2[1])**2)
 
@@ -343,6 +460,39 @@ class Control:
 #     attractive_pot = attractive_potential(goal_pos, current_pos)
 #     repulsive_pot = repulsive_potential(current_pos)
 #     return attractive_pot + repulsive_pot
+    def generate_grid(self, start_x, start_y, width, height):
+        setpoints = []
+        #trajectory = []
+        
+        # Calculate the number of points in each direction
+        num_points_x = int(width / GRID_SEARCH_SPACING)
+        num_points_y = int(height / GRID_SEARCH_SPACING)
+        #print("num points: ", num_points_x, num_points_y)
+        # Generate setpoints
+        for i in range(int(num_points_x/2)):
+            for j in range(int(num_points_y)):
+                x = start_x + 2 * i * GRID_SEARCH_SPACING
+                y = start_y + j * GRID_SEARCH_SPACING
+                #print(i,2*j, "-", x, y)
+                setpoints.append((x, y))
+                #trajectory.append((x, y))  # Add points to trajectory
+
+            for j in range(num_points_y-1, -1, -1):
+                x = start_x + (2 * i + 1) * GRID_SEARCH_SPACING
+                y = start_y + j * GRID_SEARCH_SPACING
+                setpoints.append((x, y))
+                #print(i,2*j+1, "-", x, y)
+                #trajectory.append((x, y))  # Add points to trajectory
+
+        for j in range(num_points_y):
+            x = start_x + 2 * (i + 1) * GRID_SEARCH_SPACING
+            y = start_y + j * GRID_SEARCH_SPACING
+            #print(i,2*j, "-", x, y)
+            setpoints.append((x, y))
+            #trajectory.append((x, y))  # Add points to trajectory
+
+        return setpoints #, trajectory
+
 
 
 def clip_angle(angle):
