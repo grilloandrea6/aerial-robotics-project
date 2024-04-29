@@ -33,6 +33,7 @@ STATE_SEARCH_PAD = 2
 STATE_RETURN = 3
 STATE_STOP = 4
 STATE_LAND = 5
+STATE_DEPART = 6
 
 CRUISE_HEIGHT = 0.5
 LANDING_AREA_LIMIT = 3.6 # meter, to do check
@@ -111,6 +112,8 @@ class Control:
         self.stop_counter = 1.0
         self.setpoints = self.generate_grid(3.65, 0.1, 1.5, 3.0)
         self.setpoint_index = 0
+        self.land_counter = 1.0
+        self.depart_counter = 0.0
 
         self.map = np.zeros((int(MAX_X/RES_POS)+2, int(MAX_Y/RES_POS)+2)) # 0 = unknown, 1 = free, -1 = occupied
         rows = len(self.map)
@@ -194,7 +197,7 @@ class Control:
             if min(MAX_VEL, KP*np.linalg.norm(cmd)) == MAX_VEL:
                 print("limiting")
 
-            print("current pos", current_pos, "current setpoint", self.setpoints[self.setpoint_index], "cmd", cmd)
+            #print("current pos", current_pos, "current setpoint", self.setpoints[self.setpoint_index], "cmd", cmd)
 
             control_command = [cmd[0], cmd[1], CRUISE_HEIGHT, YAW_RATE]
 
@@ -204,7 +207,33 @@ class Control:
         
         if self.state == STATE_LAND:
             print("LANDING")
-            return [0,0,CRUISE_HEIGHT,0]
+
+            if self.land_counter > -0.01:
+               self.land_counter -= 0.0006
+            else:
+                self.state = STATE_DEPART
+
+
+            if self.land_counter > CRUISE_HEIGHT:
+                cmd = [0.0, 0.0, CRUISE_HEIGHT, 0.0]
+            else:
+                cmd = [0.0, 0.0, self.land_counter, 0.0]
+            #print(current_pos, cmd)
+
+            return cmd
+        
+        if self.state == STATE_DEPART:
+            print("DEPARTING")
+
+            if self.depart_counter < CRUISE_HEIGHT:
+               self.depart_counter += 0.0006
+            else:
+                self.state = STATE_RETURN
+
+            cmd = [0.0, 0.0, self.depart_counter, 0.0]
+            
+            return cmd
+
 
         if self.state == STATE_RETURN:
             if np.linalg.norm(current_pos - self.startpos) < 0.06: 
