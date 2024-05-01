@@ -3,6 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 import cv2
+from queue import PriorityQueue
+
 
 # The available ground truth state measurements can be accessed by calling sensor_data[item]. All values of "item" are provided as defined in main.py lines 296-323. 
 # The "item" values that you can later use in the hardware project are:
@@ -34,6 +36,8 @@ STATE_RETURN = 3
 STATE_STOP = 4
 STATE_LAND = 5
 STATE_DEPART = 6
+STATE_ASTAR_FOLLOW = 7
+STATE_RETURN_FOLLOW = 8
 
 CRUISE_HEIGHT = 0.5
 LANDING_AREA_LIMIT = 3.6 # meter, to do check
@@ -45,7 +49,6 @@ RANGE_MAX = 2.0 # meter, maximum range of distance sensor
 RES_POS   = 0.05 # meter
 CONF      = 0.2 # certainty given by each measurement
 GRID_SEARCH_SPACING = 0.2  # meter
-SETPOINT_REMOVE_THRESHOLD = 1.0 # TODO!!!!!!
 LANDING_PAD_HEIGHT = 0.1
 SETPOINT_DIST_THRESHOLD = 0.08
 ATTRACTIVE_GAIN  = 0.7
@@ -109,22 +112,18 @@ class Control:
         self.state = STATE_ON_GROUND
         self.backward_y_error = 0
         self.backward_x_error = 0
-        self.stop_counter = 1.0
-        self.setpoints = self.generate_grid(3.65, 0.1, 1.5, 3.0)
+        self.stop_counter = .8
+        self.setpoints = self.generate_grid(3.7, 0.1, 1.5, 3.0)
         self.setpoint_index = 0
-        self.land_counter = 1.0
+        self.land_counter = .8
         self.depart_counter = 0.0
+        self.astar_counter = 0
+        self.astar_path = None
+        self.astar_path__ = None
+        self.security_counter = 0
 
-        self.map = np.zeros((int(MAX_X/RES_POS)+2, int(MAX_Y/RES_POS)+2)) # 0 = unknown, 1 = free, -1 = occupied
-        rows = len(self.map)
-        cols = len(self.map[0])
-        for j in range(cols):
-            self.map[0][j] = -1
-            self.map[rows - 1][j] = -1
-        for i in range(rows):
-            self.map[i][0] = -1
-            self.map[i][cols - 1] = -1
-
+        self.map = np.zeros((int(MAX_X/RES_POS), int(MAX_Y/RES_POS))) # 0 = unknown, 1 = free, -1 = occupied
+        self.map_astar = np.copy(self.map)
         self.t = 0
 
     def get_command(self, sensor_data, camera_data, dt):
@@ -147,11 +146,12 @@ class Control:
             control_command = [0.0, 0.0, CRUISE_HEIGHT, yaw_rate]
             return control_command
 
+        # print("ciclo")
         if self.state == STATE_FORWARD:
             if current_pos[0] > LANDING_AREA_LIMIT: 
                 control_command = [0.0, 0.0, CRUISE_HEIGHT, 0.0]
                 self.state = STATE_SEARCH_PAD
-                print("change state ", self.state)
+                print("change state search pad")
                 return control_command
             
             cmd = self.calculate_navigation_direction_forward(self.map, FORWARD_OBJECTIVE, current_pos)
@@ -167,18 +167,54 @@ class Control:
             return control_command
         
         if self.state == STATE_SEARCH_PAD:
-            if self.setpoint_remove(self.map, np.array(self.setpoints[self.setpoint_index])):
-                print("skipping setpoint")
-                self.setpoint_index += 1
+            start = self.point_to_map_cell(sensor_data['x_global'], sensor_data['y_global'])
+            astar_goal = self.point_to_map_cell(self.setpoints[self.setpoint_index][0], self.setpoints[self.setpoint_index][1])
+            #astar_goal = (astar_goal[0]-1, astar_goal[1])
 
-            if self.setpoint_index == len(self.setpoints):
-                self.state = STATE_RETURN
-                print("change state ", self.state)
+
+            if self.setpoint_remove(self.map_astar, np.array(astar_goal)):
+                while self.setpoint_remove(self.map_astar, np.array(astar_goal)):
+                    print("skipping setpoint")
+                    self.setpoint_index += 1
+                    start = self.point_to_map_cell(sensor_data['x_global'], sensor_data['y_global'])
+                    astar_goal = self.point_to_map_cell(self.setpoints[self.setpoint_index][0], self.setpoints[self.setpoint_index][1])
+
+            if self.setpoint_index == len(self.setpoints) - 1:
+                self.setpoint_index = 0
                 return [0,0,CRUISE_HEIGHT,0]
 
-            if np.linalg.norm(current_pos - np.array(self.setpoints[self.setpoint_index])) < SETPOINT_DIST_THRESHOLD:
-                print("reached setpoint, going to next one")
-                self.setpoint_index += 1
+            
+            #start = (start[0]+3, start[1]+1)
+            #print("start: ", start, " - map of start: ", self.map_astar[start[0], start[1]])
+            #print("goal: ", astar_goal, " - map of goal: ", self.map_astar[astar_goal[0], astar_goal[1]])
+            self.astar_path = self.a_star(self.map_astar, start, astar_goal)
+            if self.astar_path is None:
+                print("NO PATH FOUND")
+                if self.setpoint_index < len(self.setpoints) - 1 and self.map_astar[start[0], start[1]] == 1:
+                    self.setpoint_index += 1
+                return [0.1,0.1,CRUISE_HEIGHT,0]
+            #for _ in range(3):
+            #    if len(self.astar_path) > 1:
+            #        self.astar_path.pop()
+            
+            self.astar_path__ = self.astar_path.copy()
+
+            #print("PATH: ", self.astar_path)
+
+            for i in range(len(self.astar_path)):
+                if self.map_astar[self.astar_path[i][0], self.astar_path[i][1]] != 1:
+                    print("PATH GENERATED PASSES THROUGH OCCUPIED CELL")
+                    #return [0.1,0.1,CRUISE_HEIGHT,0]
+                
+                self.astar_path[i] = self.map_cell_to_point(self.astar_path[i][0], self.astar_path[i][1])
+    
+
+
+            self.astar_counter = 0
+            self.state = STATE_ASTAR_FOLLOW
+            #return [0,0,CRUISE_HEIGHT,0]
+
+        if self.state == STATE_ASTAR_FOLLOW:
 
             if abs(sensor_data['z_global'] - sensor_data['range_down']) > 0.08:
                 print("landing pad FOUND!!!!")
@@ -186,28 +222,47 @@ class Control:
                 self.state = STATE_LAND
                 return [0,0,CRUISE_HEIGHT,0]
             
-            # navigate towards the setpoint
+            #print(" - - - - astar follow - - - - ")
+            
+            current_pos = (sensor_data['x_global'], sensor_data['y_global'])
+            goal = np.array([self.astar_path[self.astar_counter][0], self.astar_path[self.astar_counter][1]])
 
-            cmd = self.calculate_navigation_direction_search(self.map, self.setpoints[self.setpoint_index][0], current_pos, y_pos=self.setpoints[self.setpoint_index][1])
+            if np.linalg.norm(current_pos - goal) < 0.04 or self.security_counter > 150:
+                #print("astar follow reached setpoint, next one - security counter: ", self.security_counter)
+                self.astar_counter += 1
+                self.security_counter = 0
+
+            if self.astar_counter == len(self.astar_path):
+                self.setpoint_index += 1
+                self.state = STATE_SEARCH_PAD
+                print("astar follow go back to search pad ", self.state)
+                self.security_counter = 0
+                return [0,0,CRUISE_HEIGHT,0]
+        
+            self.security_counter += 1
+            v = np.array([goal[0] - current_pos[0], goal[1] - current_pos[1]])
+            cmd = 0.2 * v / np.linalg.norm(v)
+
+
+            goal_cell = self.point_to_map_cell(goal[0], goal[1])
+            #print("current pos: ", current_pos)
+            #print("goal: ", goal, " - astar_map[goal]: ", self.map_astar[goal_cell[0],goal_cell[1]])
+            #print("cmd: ", cmd)
+            
             cmd = self.rotate(cmd[0], cmd[1],-sensor_data['yaw'])
 
-            cmd = (cmd/np.linalg.norm(cmd)) * min(MAX_VEL, KP*np.linalg.norm(cmd))
-
-
-            if min(MAX_VEL, KP*np.linalg.norm(cmd)) == MAX_VEL:
-                print("limiting")
-
-            #print("current pos", current_pos, "current setpoint", self.setpoints[self.setpoint_index], "cmd", cmd)
-
-            control_command = [cmd[0], cmd[1], CRUISE_HEIGHT, YAW_RATE]
-
-            #self.state = STATE_RETURN
-            #print("change state ", self.state)
-            return control_command # [0,0,CRUISE_HEIGHT,0]
+            control_command = [cmd[0], cmd[1], CRUISE_HEIGHT, YAW_RATE*0.65]
+            
+            return control_command
         
         if self.state == STATE_LAND:
-            print("LANDING")
+            # print("LANDING")
 
+            if abs(sensor_data['z_global'] - sensor_data['range_down']) < 0.08:
+                print("landing pad LOST!!!!")
+                print("change state ", self.state)
+                self.state = STATE_ASTAR_FOLLOW
+          
             if self.land_counter > -0.01:
                self.land_counter -= 0.0006
             else:
@@ -222,39 +277,89 @@ class Control:
 
             return cmd
         
+
+        
         if self.state == STATE_DEPART:
-            print("DEPARTING")
+            #print("DEPARTING")
 
             if self.depart_counter < CRUISE_HEIGHT:
-               self.depart_counter += 0.0006
+                self.depart_counter += 0.0006
             else:
                 self.state = STATE_RETURN
-
             cmd = [0.0, 0.0, self.depart_counter, 0.0]
             
             return cmd
+        
+
+
+
 
 
         if self.state == STATE_RETURN:
-            if np.linalg.norm(current_pos - self.startpos) < 0.06: 
-                control_command = [0.0, 0.0, CRUISE_HEIGHT, 0.0]
+
+            start = self.point_to_map_cell(sensor_data['x_global'], sensor_data['y_global'])
+            astar_goal = self.point_to_map_cell(self.startpos[0], self.startpos[1])
+
+            print("start: ", start, " - map of start: ", self.map_astar[start[0], start[1]])
+            print("goal: ", astar_goal, " - map of goal: ", self.map_astar[astar_goal[0], astar_goal[1]])
+            self.astar_path = self.a_star(self.map_astar, start, astar_goal)
+            if self.astar_path is None:
+                print("NO PATH FOUND")
+                return [0,0,CRUISE_HEIGHT,0]
+            self.astar_path__ = self.astar_path.copy()
+
+            for i in range(len(self.astar_path)):
+                if self.map_astar[self.astar_path[i][0], self.astar_path[i][1]] != 1:
+                    print("CAZZO\n\n\nPATH GENERATED PASSES THROUGH OCCUPIED CELL")
+                    #return [0.1,0.1,CRUISE_HEIGHT,0]
+                
+                self.astar_path[i] = self.map_cell_to_point(self.astar_path[i][0], self.astar_path[i][1])
+    
+            #print("PATH: ", self.astar_path)
+
+
+            self.astar_counter = 0
+            self.state = STATE_RETURN_FOLLOW
+
+            return [0,0,CRUISE_HEIGHT,0] # [vx, vy, alt, yaw_rate]
+
+        if self.state == STATE_RETURN_FOLLOW:            
+            current_pos = (sensor_data['x_global'], sensor_data['y_global'])
+            goal = np.array([self.astar_path[self.astar_counter][0], self.astar_path[self.astar_counter][1]])
+
+            if np.linalg.norm(current_pos - goal) < 0.07 or self.security_counter > 150:
+                #print("return follow reached setpoint, next one, security counter: ", self.security_counter)
+                self.astar_counter += 1
+                self.security_counter = 0
+
+            if self.astar_counter == len(self.astar_path):
+                self.setpoint_index += 1
                 self.state = STATE_STOP
-                print("change state ", self.state)
-                return control_command
+                self.security_counter = 0
+                print("return follow go back to search pad ", self.state)
+                return [0,0,CRUISE_HEIGHT,0]
+        
+            self.security_counter += 1
+            v = np.array([goal[0] - current_pos[0], goal[1] - current_pos[1]])
+
+
+            #goal_cell = self.point_to_map_cell(goal[0], goal[1])
+            cmd = 0.2 * v / np.linalg.norm(v)
+            #print("current pos: ", current_pos)
+            #print("goal: ", goal, " - astar_map[goal]: ", self.map_astar[goal_cell[0],goal_cell[1]])
+            #print("cmd: ", cmd)
             
-            cmd = self.calculate_navigation_direction_backward(self.map, self.startpos[0], current_pos, y_pos=self.startpos[1])
             cmd = self.rotate(cmd[0], cmd[1],-sensor_data['yaw'])
 
-            #print(current_pos, cmd)
-            cmd = (cmd/np.linalg.norm(cmd)) * min(MAX_VEL, KP*np.linalg.norm(cmd))
-
-
-            if min(MAX_VEL, KP*np.linalg.norm(cmd)) == MAX_VEL:
-                print("limiting")
-            control_command = [cmd[0], cmd[1], CRUISE_HEIGHT, YAW_RATE]
+            control_command = [cmd[0], cmd[1], CRUISE_HEIGHT, YAW_RATE*0.65]
+            
             return control_command
 
-            
+
+
+
+
+
         if self.state == STATE_STOP:
 
             if self.stop_counter > -0.01:
@@ -268,24 +373,35 @@ class Control:
 
             return cmd
 
-        
-        # vx,vy = self.rotate(navigation_direction[0],navigation_direction[1],-yaw)
-        # #desired_vx, desired_vy, desired_alt, desired_yaw_rate = command[0], command[1], command[2], command[3]
 
-        # control_command = [vx/1.5, vy/1.5, CRUISE_HEIGHT, 0.0]
+
+
+
+
+
+
+
+
+
+
         print("ERROR WRONG MODE")
         return [0,0,CRUISE_HEIGHT,0] # [vx, vy, alt, yaw_rate]
     
-    def calculate_navigation_direction_forward(self, occupancy_map, goal, current_pos):
+    def setpoint_remove(self, map, setpoint):
+        if map[setpoint[0], setpoint[1]] != 1:
+            return True
+        return False
+
+    def calculate_navigation_direction_forward(self, map, goal, current_pos):
         cmd_x = 1.25 * (goal - current_pos[0])/np.linalg.norm(goal-current_pos[0])
 
         cmd_y = 0
 
-        for i in range(occupancy_map.shape[0]):
-            for j in range(occupancy_map.shape[1]):
-                dist = np.linalg.norm(np.array([i+1, j+1])* RES_POS - (current_pos + np.array([0.14, 0.0])))
+        for i in range(map.shape[0]):
+            for j in range(map.shape[1]):
+                dist = np.linalg.norm(np.array([i, j])* RES_POS - (current_pos + np.array([0.14, 0.0])))
 
-                if dist < REPULSIVE_RADIUS and occupancy_map[i, j] < 0:
+                if dist < REPULSIVE_RADIUS and map[i, j] < 0:
                     b = .7
                     a = REPULSIVE_RADIUS
                     func = ((1.0 / (dist+b)) + (1.0 / a)) / ((dist+b)**2) - 1.08
@@ -295,138 +411,10 @@ class Control:
                         func = 0
                         print("FUNC < 0\n\n\n\n\n")
                         exit
-                    rep = - occupancy_map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i+1, j+1]))/np.linalg.norm(current_pos - RES_POS*np.array([i+1, j+1]))
+                    rep = - map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i, j]))/np.linalg.norm(current_pos - RES_POS*np.array([i, j]))
                     cmd_y += rep[1]
                     cmd_x += rep[0]/3
         return np.array([cmd_x, cmd_y])
-
-
-    def calculate_navigation_direction_backward(self, occupancy_map, goal, current_pos, y_pos=None):
-        cmd_x = 0.85 * (goal - current_pos[0])
-        print("X - cmd_x: ", cmd_x)
-        if np.linalg.norm(cmd_x) > 1.3:
-            print("clipping return vel")
-            cmd_x = 1.3 * np.sign(cmd_x)
-        if np.linalg.norm(goal - current_pos[0]) < 0.45:
-            print("add integral to x")
-            self.backward_x_error += (goal - current_pos[0])
-            #cmd_x = 0.6 * np.sign(cmd_x)
-            cmd_x += 0.005 * self.backward_x_error
-            print("X - integral term: ", 0.0015 * self.backward_x_error)
-        
-
-        cmd_y = 0
-        if y_pos != None:
-            
-            cmd_y = (y_pos - current_pos[1]) * 0.85
-            print("Y - cmd_y: ", cmd_y)
-            if np.linalg.norm(y_pos - current_pos[1]) < 0.8 and np.linalg.norm(goal - current_pos[0]) < 0.45:
-                self.backward_y_error += (y_pos - current_pos[1])
-                cmd_y += 0.002 * self.backward_y_error
-                print("Y - integral term: ", 0.0015 * self.backward_y_error)
-        # if np.linalg.norm(cmd_y) < 0.6:
-        #     print("aug return vel y")
-        #     cmd_y = 0.6 * np.sign(cmd_y)
-
-        for i in range(occupancy_map.shape[0]):
-            for j in range(occupancy_map.shape[1]):
-                dist = np.linalg.norm(np.array([i+1, j+1])* RES_POS - (current_pos - np.array([0.14, 0.0])))
-
-                if dist < REPULSIVE_RADIUS and occupancy_map[i, j] < 0:
-                    b = .7
-                    a = REPULSIVE_RADIUS
-                    func = ((1.0 / (dist+b)) + (1.0 / a)) / ((dist+b)**2) - 1.08
-                    func = func/2.75
-
-                    if func < 0:
-                        func = 0
-                        print("FUNC < 0\n\n\n\n\n")
-                        exit
-                    rep = - occupancy_map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i+1, j+1]))/np.linalg.norm(current_pos - RES_POS*np.array([i+1, j+1]))
-                    cmd_y += rep[1] * .75
-                    cmd_x += rep[0]/3
-        print("X - cmd_x after repulsion: ", cmd_x)
-        print("Y - cmd_y after repulsion: ", cmd_y)
-
-        return np.array([cmd_x, cmd_y])
-
-
-    def calculate_navigation_direction_search(self, occupancy_map, goal, current_pos, y_pos=None):
-        cmd_x = 0.85 * (goal - current_pos[0])
-        #print("X - cmd_x: ", cmd_x)
-        if np.linalg.norm(cmd_x) > 1.3:
-            #print("clipping return vel")
-            cmd_x = 1.3 * np.sign(cmd_x)
-        if np.linalg.norm(goal - current_pos[0]) < 0.45:
-            #print("add integral to x")
-            self.backward_x_error += (goal - current_pos[0])
-            #cmd_x = 0.6 * np.sign(cmd_x)
-            cmd_x += 0.005 * self.backward_x_error
-            #print("X - integral term: ", 0.0015 * self.backward_x_error)
-        
-
-        cmd_y = 0
-        if y_pos != None:
-            
-            cmd_y = (y_pos - current_pos[1]) * 0.85
-            #print("Y - cmd_y: ", cmd_y)
-            if np.linalg.norm(y_pos - current_pos[1]) < 0.8 and np.linalg.norm(goal - current_pos[0]) < 0.45:
-                self.backward_y_error += (y_pos - current_pos[1])
-                cmd_y += 0.002 * self.backward_y_error
-                #print("Y - integral term: ", 0.0015 * self.backward_y_error)
-        # if np.linalg.norm(cmd_y) < 0.6:
-        #     print("aug return vel y")
-        #     cmd_y = 0.6 * np.sign(cmd_y)
-
-        for i in range(occupancy_map.shape[0]):
-            for j in range(occupancy_map.shape[1]):
-                dist = np.linalg.norm(np.array([i+1, j+1])* RES_POS - current_pos)
-                                                                       
-                if dist < REPULSIVE_RADIUS and occupancy_map[i, j] < 0:
-                    b = .7
-                    a = REPULSIVE_RADIUS
-                    func = ((1.0 / (dist+b)) + (1.0 / a)) / ((dist+b)**2) - 1.08
-                    func = func/2.85
-
-                    if func < 0:
-                        func = 0
-                        print("FUNC < 0\n\n\n\n\n")
-                        exit
-                    rep = - occupancy_map[i, j] * REPULSIVE_GAIN * func * (current_pos - RES_POS*np.array([i+1, j+1]))/np.linalg.norm(current_pos - RES_POS*np.array([i+1, j+1]))
-                    cmd_y += rep[1] * .75 / 2
-                    cmd_x += rep[0]/3 / 2
-        #print("X - cmd_x after repulsion: ", cmd_x)
-        #print("Y - cmd_y after repulsion: ", cmd_y)
-
-        return np.array([cmd_x, cmd_y])
-
-
-
-
-    def setpoint_remove(self, occupancy_map, setpoint_pos):
-        cmd = [0, 0]
-        for i in range(occupancy_map.shape[0]):
-            for j in range(occupancy_map.shape[1]):
-                dist = np.linalg.norm(np.array([i+1, j+1])* RES_POS - setpoint_pos)
-
-                if dist < REPULSIVE_RADIUS and occupancy_map[i, j] < 0:
-                    b = .7
-                    a = REPULSIVE_RADIUS
-                    func = ((1.0 / (dist+b)) + (1.0 / a)) / ((dist+b)**2) - 1.08
-                    func = func/2.75
-
-                    if func < 0:
-                        func = 0
-                        print("FUNC < 0\n\n\n\n\n")
-                        exit
-                    rep = - occupancy_map[i, j] * REPULSIVE_GAIN * func * (setpoint_pos - RES_POS*np.array([i+1, j+1]))/np.linalg.norm(setpoint_pos - RES_POS*np.array([i+1, j+1]))
-                    cmd += rep
-        if np.linalg.norm(cmd) > SETPOINT_REMOVE_THRESHOLD:
-            return True
-        return False
-
-    def dist(self, pos1, pos2):
-        return np.sqrt((pos1[0]-pos2[0])**2 + (pos1[1]-pos2[1])**2)
 
     def rotate(self, x, y, angle):
         x_prime = x * np.cos(angle) - y * np.sin(angle)
@@ -452,27 +440,57 @@ class Control:
             
             for i in range(int(RANGE_MAX / RES_POS)): # range is 2 meters
                 dist = i*RES_POS
-                idx_x = int(np.round((pos_x + dist*np.cos(yaw_sensor))/RES_POS,0)) + 1
-                idx_y = int(np.round((pos_y + dist*np.sin(yaw_sensor))/RES_POS,0)) + 1
+                idx_x = int(np.round((pos_x + dist*np.cos(yaw_sensor))/RES_POS,0))
+                idx_y = int(np.round((pos_y + dist*np.sin(yaw_sensor))/RES_POS,0))
 
                 # make sure the current_setpoint is within the map
-                if idx_x < 1 or idx_x >= (self.map.shape[0] - 1) or idx_y < 1 or idx_y >= (self.map.shape[1]-1) or dist > RANGE_MAX:
+                if idx_x < 0 or idx_x >= self.map.shape[0] or idx_y < 0 or idx_y >= self.map.shape[1] or dist > RANGE_MAX:
                     break
 
                 # update the map
                 if dist < measurement:
                     self.map[idx_x, idx_y] += CONF
+
+                    self.map_astar[idx_x, idx_y] += CONF
                 else:
                     self.map[idx_x, idx_y] -= CONF
+
+                    for dx in range(-2, 3):
+                        for dy in range(-2, 3):
+                            if 0 <= idx_x + dx < self.map.shape[0] and 0 <= idx_y + dy < self.map.shape[1]:
+                                self.map_astar[idx_x + dx, idx_y + dy] -= CONF
                     break
         
         self.map = np.clip(self.map, -1, 1) # certainty can never be more than 100%
-        # if self.t % 50 == 0:
-        #     np.savetxt("map.txt",np.flip(self.map,1))
-        #     plt.imshow(np.flip(self.map,1), vmin=-1, vmax=1, cmap='gray', origin='lower') # flip the map to match the coordinate system
-        #     plt.savefig("map.png")
-        #     plt.close()
-        #     self.t = 0 
+        self.map_astar = np.clip(self.map_astar, -1, 1) # certainty can never be more than 100%
+        self.map[0, :] = -1
+        self.map[-1, :] = -1
+        self.map[:, 0] = -1
+        self.map[:, -1] = -1
+        self.map_astar[0, :] = -1
+        self.map_astar[-1, :] = -1
+        self.map_astar[:, 0] = -1
+        self.map_astar[:, -1] = -1
+        if self.t % 50 == 0:
+            # np.savetxt("map.txt",np.flip(self.map,1))
+            plt.imshow(np.flip(self.map,1), vmin=-1, vmax=1, cmap='gray', origin='lower') # flip the map to match the coordinate system
+            plt.savefig("map.png")
+            plt.close()
+            # np.savetxt("map.txt",np.flip(self.map,1))
+            plt.imshow(np.flip(self.map_astar,1), vmin=-1, vmax=1, cmap='gray', origin='lower') # flip the map to match the coordinate system
+            
+            
+            
+            if self.astar_path__ is not None:
+                trajectory_x, trajectory_y = zip(*self.astar_path__)
+                trajectory_y = tuple(map(lambda x: self.map_astar.shape[1] - x, trajectory_y))
+                plt.plot(trajectory_y, trajectory_x, marker='o', linestyle='-', color='blue', label='Trajectory')
+
+
+            plt.savefig("map_astar.png")
+            plt.close()
+            self.t = 0 
+        self.t = 24
         # self.t += 1
 
     # # only plot every Nth time step (comment out if not needed)
@@ -522,12 +540,68 @@ class Control:
 
         return setpoints #, trajectory
 
+    def point_to_map_cell(self, x, y):
+        idx_x = int(x / RES_POS) 
+        idx_y = int(y / RES_POS)
+
+        return idx_x, idx_y
+    
+    def map_cell_to_point(self, cell_x, cell_y):
+        return ((cell_x + 0.5)*RES_POS, (cell_y + 0.5)*RES_POS)
 
 
-def clip_angle(angle):
-    angle = angle%(2*np.pi)
-    if angle > np.pi:
-        angle -= 2*np.pi
-    if angle < -np.pi:
-        angle += 2*np.pi
-    return angle
+
+
+    def heuristic(self, a, b):
+        """Calculate the Manhattan distance between two points a and b"""
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+    def a_star(self, grid, start, goal):
+        #start = (start[0]-1, start[1])
+        
+        if grid[goal[0], goal[1]] != 1:
+            print("start or goal not valid")
+            self.setpoint_index += 1
+            return None
+
+        open_set = PriorityQueue()
+        open_set.put((0, start))
+        came_from = {}
+        g_score = {start: 0}
+        f_score = {start: self.heuristic(start, goal)}
+
+        # Only include non-diagonal directions
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+
+        while not open_set.empty():
+            current = open_set.get()[1]
+
+            if current == goal:
+                path = []
+                while current in came_from:
+                    path.append(current)
+                    current = came_from[current]
+                path.append(start)
+                return path[::-1]  # Return reversed path
+
+            for direction in directions:
+                neighbor = (current[0] + direction[0], current[1] + direction[1])
+
+                # Ensure neighbor is within grid bounds
+                if 0 < neighbor[0] < grid.shape[0] and 0 < neighbor[1] < grid.shape[1]:
+                    # Skip if neighbor is an obstacle or not traversable
+                    if grid[neighbor[0], neighbor[1]] != 1:
+                        continue
+
+                    # Uniform cost for horizontal and vertical moves
+                    move_cost = 1
+
+                    tentative_g_score = g_score[current] + move_cost
+
+                    if neighbor not in g_score or tentative_g_score < g_score[neighbor]:
+                        came_from[neighbor] = current
+                        g_score[neighbor] = tentative_g_score
+                        f_score[neighbor] = tentative_g_score + self.heuristic(neighbor, goal)
+                        open_set.put((f_score[neighbor], neighbor))
+
+        return None  # Path not found
