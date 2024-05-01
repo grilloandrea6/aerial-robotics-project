@@ -170,12 +170,19 @@ class Control:
             start = self.point_to_map_cell(sensor_data['x_global'], sensor_data['y_global'])
             astar_goal = self.point_to_map_cell(self.setpoints[self.setpoint_index][0], self.setpoints[self.setpoint_index][1])
             #astar_goal = (astar_goal[0]-1, astar_goal[1])
+            while not start[0] < self.map_astar.shape[0]:
+                start = (start[0]-1, start[1])
+            while not start[1] < self.map_astar.shape[1]:
+                start = (start[0], start[1]-1)
+
 
 
             if self.setpoint_remove(self.map_astar, np.array(astar_goal)):
                 while self.setpoint_remove(self.map_astar, np.array(astar_goal)):
                     print("skipping setpoint")
                     self.setpoint_index += 1
+                    if self.setpoint_index == len(self.setpoints):
+                        self.setpoint_index = 0
                     start = self.point_to_map_cell(sensor_data['x_global'], sensor_data['y_global'])
                     astar_goal = self.point_to_map_cell(self.setpoints[self.setpoint_index][0], self.setpoints[self.setpoint_index][1])
 
@@ -192,7 +199,7 @@ class Control:
                 print("NO PATH FOUND")
                 if self.setpoint_index < len(self.setpoints) - 1 and self.map_astar[start[0], start[1]] == 1:
                     self.setpoint_index += 1
-                return [0.1,0.1,CRUISE_HEIGHT,0]
+                return [0.12,0.12,CRUISE_HEIGHT,0.3]
             #for _ in range(3):
             #    if len(self.astar_path) > 1:
             #        self.astar_path.pop()
