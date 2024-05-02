@@ -1,4 +1,4 @@
-Run time: 2024-05-01 19:39:36
+Run time: 2024-05-01 12:17:43
 Total simulations: 20
 -----------------------------------
 Simulation 1 of 20
@@ -8,6 +8,15 @@ Congratulations! You have reached the landing zone, now find the landing pad.
 change state search pad
 skipping setpoint
 skipping setpoint
+skipping setpoint
+landing pad FOUND!!!!
+change state  7
+landing pad LOST!!!!
+change state  5
+landing pad FOUND!!!!
+change state  7
+landing pad LOST!!!!
+change state  5
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -15,9 +24,10 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
+landing pad FOUND!!!!
+change state  7
+landing pad LOST!!!!
+change state  5
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -31,11 +41,10 @@ astar follow go back to search pad  2
 landing pad FOUND!!!!
 change state  7
 Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (77, 31)  - map of start:  1.0
-goal:  (11, 25)  - map of goal:  1.0
+start:  (77, 39)  - map of start:  1.0
+goal:  (9, 14)  - map of goal:  1.0
 Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
 return follow go back to search pad  4
-final time:  107.28137731552124
 Congratulations! You have made it back to the takeoff pad.
 INFO: main: Terminating.
 -----------------------------------
@@ -44,26 +53,135 @@ INFO: main: Starting controller: python3 -u main.py
 change state  1
 Congratulations! You have reached the landing zone, now find the landing pad.
 change state search pad
+astar follow go back to search pad  2
 skipping setpoint
 skipping setpoint
 skipping setpoint
+astar follow go back to search pad  2
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
 skipping setpoint
 skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
 landing pad FOUND!!!!
 change state  7
 Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (74, 48)  - map of start:  1.0
-goal:  (20, 42)  - map of goal:  1.0
+start:  (78, 39)  - map of start:  1.0
+goal:  (14, 22)  - map of goal:  1.0
 Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
 return follow go back to search pad  4
-final time:  72.01670980453491
 Congratulations! You have made it back to the takeoff pad.
 INFO: main: Terminating.
 -----------------------------------
@@ -85,23 +203,9 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
 skipping setpoint
 skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-skipping setpoint
-skipping setpoint
+PATH GENERATED PASSES THROUGH OCCUPIED CELL
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -112,11 +216,10 @@ astar follow go back to search pad  2
 landing pad FOUND!!!!
 change state  7
 Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (82, 30)  - map of start:  1.0
-goal:  (10, 7)  - map of goal:  1.0
+start:  (78, 29)  - map of start:  1.0
+goal:  (22, 10)  - map of goal:  1.0
 Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
 return follow go back to search pad  4
-final time:  6540.471253633499
 Congratulations! You have made it back to the takeoff pad.
 INFO: main: Terminating.
 -----------------------------------
@@ -127,53 +230,6 @@ Congratulations! You have reached the landing zone, now find the landing pad.
 change state search pad
 skipping setpoint
 skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-skipping setpoint
-skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-skipping setpoint
-skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-PATH GENERATED PASSES THROUGH OCCUPIED CELL
-INFO: main: Terminating.
------------------------------------
-Simulation 5 of 20
-INFO: main: Starting controller: python3 -u main.py
-change state  1
-Congratulations! You have reached the landing zone, now find the landing pad.
-change state search pad
-skipping setpoint
-skipping setpoint
 skipping setpoint
 skipping setpoint
 skipping setpoint
@@ -186,24 +242,10 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
+astar follow go back to search pad  2
 skipping setpoint
 skipping setpoint
 skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -214,11 +256,69 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 landing pad FOUND!!!!
 change state  7
-start:  (80, 38)  - map of start:  1.0
-goal:  (14, 35)  - map of goal:  1.0
+Congratulations! You have reached the landing pad, the goal is now hidden.
+start:  (77, 15)  - map of start:  1.0
+goal:  (11, 51)  - map of goal:  1.0
 Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
 return follow go back to search pad  4
-final time:  123.89707565307617
+Congratulations! You have made it back to the takeoff pad.
+INFO: main: Terminating.
+-----------------------------------
+Simulation 5 of 20
+INFO: main: Starting controller: python3 -u main.py
+change state  1
+Congratulations! You have reached the landing zone, now find the landing pad.
+change state search pad
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+landing pad FOUND!!!!
+change state  7
+landing pad LOST!!!!
+change state  5
+landing pad FOUND!!!!
+change state  7
+landing pad LOST!!!!
+change state  5
+landing pad FOUND!!!!
+change state  7
+landing pad LOST!!!!
+change state  5
+landing pad FOUND!!!!
+change state  7
+landing pad LOST!!!!
+change state  5
+landing pad FOUND!!!!
+change state  7
+landing pad LOST!!!!
+change state  5
+landing pad FOUND!!!!
+change state  7
+Congratulations! You have reached the landing pad, the goal is now hidden.
+start:  (79, 26)  - map of start:  1.0
+goal:  (8, 29)  - map of goal:  1.0
+Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
+return follow go back to search pad  4
 Congratulations! You have made it back to the takeoff pad.
 INFO: main: Terminating.
 -----------------------------------
@@ -239,12 +339,10 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 skipping setpoint
 skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
 astar follow go back to search pad  2
 skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
 skipping setpoint
 skipping setpoint
 astar follow go back to search pad  2
@@ -258,54 +356,197 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
-astar follow go back to search pad  2
-landing pad FOUND!!!!
-change state  7
-landing pad LOST!!!!
-change state  5
-astar follow go back to search pad  2
-landing pad FOUND!!!!
-change state  7
-landing pad LOST!!!!
-change state  5
-landing pad FOUND!!!!
-change state  7
-landing pad LOST!!!!
-change state  5
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 skipping setpoint
+skipping setpoint
 astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-landing pad FOUND!!!!
-change state  7
-Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (86, 9)  - map of start:  1.0
-goal:  (19, 50)  - map of goal:  1.0
-Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
-return follow go back to search pad  4
-final time:  185.21090579032898
-Congratulations! You have made it back to the takeoff pad.
-INFO: main: Terminating.
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+skipping setpoint
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+skipping setpoint
+skipping setpoint
+skipping setpoint
+NO PATH FOUND
+NO PATH FOUND
+skipping setpoint
+skipping setpoint
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
 -----------------------------------
 Simulation 7 of 20
 INFO: main: Starting controller: python3 -u main.py
@@ -314,6 +555,8 @@ Congratulations! You have reached the landing zone, now find the landing pad.
 change state search pad
 astar follow go back to search pad  2
 astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -346,82 +589,67 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 landing pad FOUND!!!!
 change state  7
+landing pad LOST!!!!
+change state  5
+astar follow go back to search pad  2
+landing pad FOUND!!!!
+change state  7
 Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (81, 25)  - map of start:  1.0
-goal:  (22, 23)  - map of goal:  1.0
+start:  (86, 20)  - map of start:  1.0
+goal:  (18, 12)  - map of goal:  1.0
 Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
 return follow go back to search pad  4
-final time:  129.87270331382751
 Congratulations! You have made it back to the takeoff pad.
 INFO: main: Terminating.
 -----------------------------------
 Simulation 8 of 20
 INFO: main: Starting controller: python3 -u main.py
 change state  1
-INFO: main: Terminating.
------------------------------------
-Simulation 9 of 20
-INFO: main: Starting controller: python3 -u main.py
-change state  1
-Congratulations! You have reached the goal for the first time.
-Congratulations! You have reached the landing zone, now find the landing pad.
-change state search pad
-skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-skipping setpoint
-skipping setpoint
-skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-landing pad FOUND!!!!
-change state  7
-Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (77, 34)  - map of start:  1.0
-goal:  (11, 20)  - map of goal:  1.0
-Congratulations! You have reached the goal after it was hidden.
-Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
-return follow go back to search pad  4
-final time:  97.94614553451538
-Congratulations! You have made it back to the takeoff pad.
-INFO: main: Terminating.
------------------------------------
-Simulation 10 of 20
-INFO: main: Starting controller: python3 -u main.py
-change state  1
 Congratulations! You have reached the landing zone, now find the landing pad.
 change state search pad
 skipping setpoint
 skipping setpoint
+skipping setpoint
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 skipping setpoint
 skipping setpoint
-skipping setpoint
+astar follow go back to search pad  2
+PATH GENERATED PASSES THROUGH OCCUPIED CELL
 astar follow go back to search pad  2
 astar follow go back to search pad  2
-skipping setpoint
-skipping setpoint
 astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
 PATH GENERATED PASSES THROUGH OCCUPIED CELL
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -442,21 +670,24 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
+skipping setpoint
 astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
+skipping setpoint
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 skipping setpoint
 skipping setpoint
 skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -470,33 +701,58 @@ landing pad FOUND!!!!
 change state  7
 landing pad LOST!!!!
 change state  5
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
 landing pad FOUND!!!!
 change state  7
 landing pad LOST!!!!
 change state  5
 astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
+landing pad FOUND!!!!
+change state  7
+INFO: main: Terminating.
+-----------------------------------
+Simulation 9 of 20
+INFO: main: Starting controller: python3 -u main.py
+change state  1
+Congratulations! You have reached the landing zone, now find the landing pad.
+change state search pad
+skipping setpoint
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 landing pad FOUND!!!!
 change state  7
 Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (89, 30)  - map of start:  1.0
-goal:  (15, 34)  - map of goal:  1.0
+start:  (73, 14)  - map of start:  1.0
+goal:  (13, 26)  - map of goal:  1.0
 Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
 return follow go back to search pad  4
-final time:  194.83295035362244
 Congratulations! You have made it back to the takeoff pad.
+INFO: main: Terminating.
+-----------------------------------
+Simulation 10 of 20
+INFO: main: Starting controller: python3 -u main.py
+change state  1
 INFO: main: Terminating.
 -----------------------------------
 Simulation 11 of 20
@@ -520,6 +776,15 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -529,6 +794,30 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+PATH GENERATED PASSES THROUGH OCCUPIED CELL
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+PATH GENERATED PASSES THROUGH OCCUPIED CELL
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -538,21 +827,17 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
 astar follow go back to search pad  2
-astar follow go back to search pad  2
-landing pad FOUND!!!!
-change state  7
-landing pad LOST!!!!
-change state  5
 astar follow go back to search pad  2
 landing pad FOUND!!!!
 change state  7
 Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (81, 28)  - map of start:  1.0
-goal:  (6, 20)  - map of goal:  1.0
+start:  (90, 37)  - map of start:  1.0
+goal:  (9, 51)  - map of goal:  1.0
 Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
 return follow go back to search pad  4
-final time:  145.45535326004028
 Congratulations! You have made it back to the takeoff pad.
 INFO: main: Terminating.
 -----------------------------------
@@ -564,63 +849,20 @@ change state search pad
 skipping setpoint
 skipping setpoint
 astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
 skipping setpoint
 skipping setpoint
 skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
 skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-skipping setpoint
-PATH GENERATED PASSES THROUGH OCCUPIED CELL
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-skipping setpoint
-PATH GENERATED PASSES THROUGH OCCUPIED CELL
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 landing pad FOUND!!!!
 change state  7
 Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (85, 37)  - map of start:  1.0
-goal:  (12, 34)  - map of goal:  1.0
+start:  (74, 41)  - map of start:  1.0
+goal:  (10, 9)  - map of goal:  1.0
 Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
 return follow go back to search pad  4
-final time:  165.88993668556213
 Congratulations! You have made it back to the takeoff pad.
 INFO: main: Terminating.
 -----------------------------------
@@ -631,34 +873,7 @@ Congratulations! You have reached the landing zone, now find the landing pad.
 change state search pad
 skipping setpoint
 skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
 skipping setpoint
-skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -670,6 +885,10 @@ PATH GENERATED PASSES THROUGH OCCUPIED CELL
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+skipping setpoint
+skipping setpoint
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -677,19 +896,45 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
-landing pad FOUND!!!!
-change state  7
-landing pad LOST!!!!
-change state  5
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
 astar follow go back to search pad  2
 landing pad FOUND!!!!
 change state  7
 Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (86, 50)  - map of start:  1.0
-goal:  (7, 52)  - map of goal:  1.0
+start:  (85, 14)  - map of start:  1.0
+goal:  (16, 39)  - map of goal:  1.0
 Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
 return follow go back to search pad  4
-final time:  183.25416159629822
 Congratulations! You have made it back to the takeoff pad.
 INFO: main: Terminating.
 -----------------------------------
@@ -698,24 +943,135 @@ INFO: main: Starting controller: python3 -u main.py
 change state  1
 Congratulations! You have reached the landing zone, now find the landing pad.
 change state search pad
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+skipping setpoint
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+NO PATH FOUND
+PATH GENERATED PASSES THROUGH OCCUPIED CELL
+astar follow go back to search pad  2
+astar follow go back to search pad  2
 skipping setpoint
 skipping setpoint
 skipping setpoint
 skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+landing pad FOUND!!!!
+change state  7
+landing pad LOST!!!!
+change state  5
 landing pad FOUND!!!!
 change state  7
 Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (75, 47)  - map of start:  1.0
-goal:  (20, 50)  - map of goal:  1.0
+start:  (85, 39)  - map of start:  1.0
+goal:  (7, 8)  - map of goal:  1.0
 Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
 return follow go back to search pad  4
-final time:  63.3759925365448
 Congratulations! You have made it back to the takeoff pad.
 INFO: main: Terminating.
 -----------------------------------
 Simulation 15 of 20
 INFO: main: Starting controller: python3 -u main.py
 change state  1
+Congratulations! You have reached the goal for the first time.
 Congratulations! You have reached the landing zone, now find the landing pad.
 change state search pad
 astar follow go back to search pad  2
@@ -731,30 +1087,9 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
 skipping setpoint
 skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
+skipping setpoint
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -763,91 +1098,16 @@ astar follow go back to search pad  2
 landing pad FOUND!!!!
 change state  7
 Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (81, 51)  - map of start:  1.0
-goal:  (9, 47)  - map of goal:  1.0
+start:  (78, 36)  - map of start:  1.0
+goal:  (7, 30)  - map of goal:  1.0
 Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
 return follow go back to search pad  4
-final time:  183.33599281311035
 Congratulations! You have made it back to the takeoff pad.
 INFO: main: Terminating.
 -----------------------------------
 Simulation 16 of 20
 INFO: main: Starting controller: python3 -u main.py
 change state  1
-Congratulations! You have reached the landing zone, now find the landing pad.
-change state search pad
-skipping setpoint
-skipping setpoint
-skipping setpoint
-skipping setpoint
-skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-PATH GENERATED PASSES THROUGH OCCUPIED CELL
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-skipping setpoint
-astar follow go back to search pad  2
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-PATH GENERATED PASSES THROUGH OCCUPIED CELL
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-landing pad FOUND!!!!
-change state  7
-Congratulations! You have reached the landing pad, the goal is now hidden.
-start:  (86, 18)  - map of start:  1.0
-goal:  (10, 36)  - map of goal:  1.0
-Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
-return follow go back to search pad  4
-final time:  168.20949816703796
-Congratulations! You have made it back to the takeoff pad.
 INFO: main: Terminating.
 -----------------------------------
 Simulation 17 of 20
@@ -861,25 +1121,11 @@ skipping setpoint
 skipping setpoint
 skipping setpoint
 skipping setpoint
+skipping setpoint
+skipping setpoint
 astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
 skipping setpoint
 astar follow go back to search pad  2
 astar follow go back to search pad  2
@@ -888,149 +1134,243 @@ astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
 skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-astar follow go back to search pad  2
-skipping setpoint
-skipping setpoint
-astar follow go back to search pad  2
-PATH GENERATED PASSES THROUGH OCCUPIED CELL
-astar follow go back to search pad  2
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
 PATH GENERATED PASSES THROUGH OCCUPIED CELL
 astar follow go back to search pad  2
 astar follow go back to search pad  2
-PATH GENERATED PASSES THROUGH OCCUPIED CELL
-astar follow go back to search pad  2
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-skipping setpoint
-skipping setpoint
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-astar follow go back to search pad  2
-PATH GENERATED PASSES THROUGH OCCUPIED CELL
 astar follow go back to search pad  2
 astar follow go back to search pad  2
-PATH GENERATED PASSES THROUGH OCCUPIED CELL
-astar follow go back to search pad  2
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-skipping setpoint
-skipping setpoint
-NO PATH FOUND
-NO PATH FOUND
-skipping setpoint
-skipping setpoint
 skipping setpoint
 astar follow go back to search pad  2
 astar follow go back to search pad  2
 astar follow go back to search pad  2
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-NO PATH FOUND
-PATH GENERATED PASSES THROUGH OCCUPIED CELL
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+landing pad FOUND!!!!
+change state  7
+landing pad LOST!!!!
+change state  5
+astar follow go back to search pad  2
+landing pad FOUND!!!!
+change state  7
+Congratulations! You have reached the landing pad, the goal is now hidden.
+start:  (89, 32)  - map of start:  1.0
+goal:  (16, 50)  - map of goal:  1.0
+Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
+return follow go back to search pad  4
+Congratulations! You have made it back to the takeoff pad.
 INFO: main: Terminating.
 -----------------------------------
 Simulation 18 of 20
 INFO: main: Starting controller: python3 -u main.py
 change state  1
+Congratulations! You have reached the goal for the first time.
+Congratulations! You have reached the landing zone, now find the landing pad.
+change state search pad
+skipping setpoint
+skipping setpoint
+skipping setpoint
+NO PATH FOUND
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+landing pad FOUND!!!!
+change state  7
+Congratulations! You have reached the landing pad, the goal is now hidden.
+start:  (77, 29)  - map of start:  1.0
+goal:  (15, 41)  - map of goal:  1.0
+Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
+return follow go back to search pad  4
+Congratulations! You have made it back to the takeoff pad.
+INFO: main: Terminating.
+-----------------------------------
+Simulation 19 of 20
+INFO: main: Starting controller: python3 -u main.py
+change state  1
+Congratulations! You have reached the landing zone, now find the landing pad.
+change state search pad
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+landing pad FOUND!!!!
+change state  7
+Congratulations! You have reached the landing pad, the goal is now hidden.
+start:  (86, 34)  - map of start:  1.0
+goal:  (7, 21)  - map of goal:  1.0
+Congratulations! You have made it back to the takeoff zone, now find the takeoff pad.
+return follow go back to search pad  4
+Congratulations! You have made it back to the takeoff pad.
+INFO: main: Terminating.
+-----------------------------------
+Simulation 20 of 20
+INFO: main: Starting controller: python3 -u main.py
+change state  1
+Congratulations! You have reached the landing zone, now find the landing pad.
+change state search pad
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+PATH GENERATED PASSES THROUGH OCCUPIED CELL
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+skipping setpoint
+skipping setpoint
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+astar follow go back to search pad  2
+landing pad FOUND!!!!
+change state  7
+Congratulations! You have reached the landing pad, the goal is now hidden.
+start:  (86, 8)  - map of start:  1.0
+goal:  (17, 22)  - map of goal:  1.0
+INFO: main: Terminating.
+-----------------------------------
+-----------------------------------

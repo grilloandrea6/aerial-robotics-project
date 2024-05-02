@@ -25,7 +25,7 @@ height_desired = 1.0
 timer = None
 startpos = None
 timer_done = None
-
+final = False
 init = False
 t = 0
 
@@ -63,9 +63,10 @@ YAW_RATE = 1.5
 
 # This is the main function where you will implement your control algorithm
 def get_command(sensor_data, camera_data, dt):
-    global init, control
+    global init, control, start_time, final
 
     if not init:
+        start_time = time.time()
         control = Control()
         init = True
 
@@ -127,6 +128,7 @@ class Control:
         self.t = 0
 
     def get_command(self, sensor_data, camera_data, dt):
+        global start_time, final
         # Take off
         #print(f"state: {self.state}")
         if self.startpos is None:
@@ -234,7 +236,7 @@ class Control:
             current_pos = (sensor_data['x_global'], sensor_data['y_global'])
             goal = np.array([self.astar_path[self.astar_counter][0], self.astar_path[self.astar_counter][1]])
 
-            if np.linalg.norm(current_pos - goal) < 0.04 or self.security_counter > 150:
+            if np.linalg.norm(current_pos - goal) < 0.04 or self.security_counter > 50:
                 #print("astar follow reached setpoint, next one - security counter: ", self.security_counter)
                 self.astar_counter += 1
                 self.security_counter = 0
@@ -271,7 +273,7 @@ class Control:
                 self.state = STATE_ASTAR_FOLLOW
           
             if self.land_counter > -0.01:
-               self.land_counter -= 0.0006
+               self.land_counter -= 0.003
             else:
                 self.state = STATE_DEPART
 
@@ -290,7 +292,7 @@ class Control:
             #print("DEPARTING")
 
             if self.depart_counter < CRUISE_HEIGHT:
-                self.depart_counter += 0.0006
+                self.depart_counter += 0.003
             else:
                 self.state = STATE_RETURN
             cmd = [0.0, 0.0, self.depart_counter, 0.0]
@@ -334,7 +336,7 @@ class Control:
             current_pos = (sensor_data['x_global'], sensor_data['y_global'])
             goal = np.array([self.astar_path[self.astar_counter][0], self.astar_path[self.astar_counter][1]])
 
-            if np.linalg.norm(current_pos - goal) < 0.07 or self.security_counter > 150:
+            if np.linalg.norm(current_pos - goal) < 0.07 or self.security_counter > 50:
                 #print("return follow reached setpoint, next one, security counter: ", self.security_counter)
                 self.astar_counter += 1
                 self.security_counter = 0
@@ -370,7 +372,11 @@ class Control:
         if self.state == STATE_STOP:
 
             if self.stop_counter > -0.01:
-                self.stop_counter -= 0.0006
+                self.stop_counter -= 0.003
+            else:  
+                if not final:
+                    print("final time: ", time.time() - start_time)
+                    final = True
 
             if self.stop_counter > CRUISE_HEIGHT:
                 cmd = [0.0, 0.0, CRUISE_HEIGHT, 0.0]

@@ -13,9 +13,9 @@ echo "Total simulations: $arg"
 for ((i=1; i<=$arg; i++)); do
     echo "-----------------------------------"
     echo "Simulation $i of $arg"
-    webots --no-rendering --mode=fast --stdout --stderr --batch --minimize worlds/crazyflie_world_assignment.wbt &
+    webots --no-rendering --mode=realtime --stdout --stderr --batch --minimize worlds/crazyflie_world_assignment.wbt &
     # webots --mode=realtime --stdout --stderr --batch worlds/crazyflie_world_assignment.wbt &
-    sleep 200
+    sleep 280
     pkill webots
     sleep 1
 done
