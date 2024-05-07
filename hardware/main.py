@@ -38,6 +38,8 @@ from cflib.crazyflie.log import LogConfig
 from cflib.crazyflie.syncCrazyflie import SyncCrazyflie
 from cflib.crazyflie.syncLogger import SyncLogger
 from cflib.utils import uri_helper
+from cflib.positioning.motion_commander import MotionCommander
+from cflib.utils.multiranger import Multiranger
 import sys
 
 # URI to the Crazyflie to connect to
@@ -46,7 +48,8 @@ uri = uri_helper.uri_from_env(default='radio://0/10/2M/E7E7E7E701')
 # Change the sequence according to your setup
 #             x    y    z  YAW
 
-
+x = 0
+y = 0
 
 def wait_for_position_estimator(scf):
     print('Waiting for estimator to find position...')
@@ -101,8 +104,8 @@ def reset_estimator(scf):
 def position_callback(timestamp, data, logconf):
     x = data['kalman.stateX']
     y = data['kalman.stateY']
-    z = data['kalman.stateZ']
-    print('pos: ({}, {}, {})'.format(x, y, z))
+    # z = data['kalman.stateZ']
+    # print('pos: ({}, {}, {})'.format(x, y, z))
 
 
 def start_position_printing(scf):
@@ -121,25 +124,29 @@ if __name__ == '__main__':
 
     # import the controller
     sys.path.append('..')
-    from my_control import get_command
+    from my_control import get_command, SensorData
     sys.path.remove('..')
 
     cflib.crtp.init_drivers()
+    cf = Crazyflie(rw_cache='./cache')
 
     with SyncCrazyflie(uri, cf=Crazyflie(rw_cache='./cache')) as scf:
-        reset_estimator(scf)
-        start_position_printing(scf)
-        cf = scf.cf
-        loop_flag = True
-        while loop_flag:
-            command = get_command(sensor_data, dt_ctrl)
-            cf.commander.send_position_setpoint()
-            time.sleep(0.1)
+        with MotionCommander(scf) as motion_commander:
+            with Multiranger(scf) as multiranger:
+                reset_estimator(scf)
+                start_position_printing(scf)
+                cf = scf.cf
+                loop_flag = True
+                while loop_flag:
+                    sensor_data = {'x_global': x, 'y_global': y, 'range_front': multiranger.front, 'range_back': multiranger.back, 'range_left': multiranger.left, 'range_right': multiranger.right, 'range_down': multiranger.up}
+                    command = get_command(sensor_data, None)
+                    cf.commander.send_position_setpoint(command[0], command[1], command[2], command[3])
+                    time.sleep(0.1)
 
-        cf.commander.send_stop_setpoint()
-        # Hand control over to the high level commander to avoid timeout and locking of the Crazyflie
-        cf.commander.send_notify_setpoint_stop()
+                cf.commander.send_stop_setpoint()
+                # Hand control over to the high level commander to avoid timeout and locking of the Crazyflie
+                cf.commander.send_notify_setpoint_stop()
 
-        # Make sure that the last packet leaves before the link is closed
-        # since the message queue is not flushed before closing
-        time.sleep(0.1)
+                # Make sure that the last packet leaves before the link is closed
+                # since the message queue is not flushed before closing
+                time.sleep(0.1)
