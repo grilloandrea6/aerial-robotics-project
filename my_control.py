@@ -74,7 +74,7 @@ def get_command(sensor_data, dt):
     #cv2.waitKey(1)
 
     cmd = control.get_command(sensor_data, dt)
-    print("Command: ", cmd)
+    #print("Command: ", cmd)
     return cmd
 
 
@@ -92,52 +92,64 @@ class DroneControl:
         self.no_obstacle_threshold = 0.6 # Threshold to consider that there is no obstacle in front of the drone
         self.side_obstacle_threshold = 0.2 # Threshold to consider that there is an obstacle on the side of the drone
 
-    def command_threshold(self, old_control_command, new_control_command, threshold = command_threshold_val, increment = command_threshold_val):
+    def command_threshold(self, old_control_command, new_control_command, sensor_data, threshold = command_threshold_val, threshold_command_reached = 0.02):
         '''Check if the new command is higher than the threshold: in this case return the old command plus an increment, otherwise return the new command. Do it for every coordinate, x, y anz z'''
         new_control_command = np.array(new_control_command)
         old_control_command = np.array(old_control_command)
-        for i in range(3):
-            if new_control_command[i] - old_control_command[i] > threshold:
-                new_control_command[i] = old_control_command[i] + increment
-            elif old_control_command[i] - new_control_command[i] < - threshold:
-                new_control_command[i] = old_control_command[i] - increment
+        # If old command has been reached, update the command otherwise return old command 
+        #print("Distance to old command: ", np.linalg.norm(np.array([sensor_data['x_global'], sensor_data['y_global'], old_control_command[2], 0.0]) - old_control_command))
+        if np.linalg.norm(np.array([sensor_data['x_global'], sensor_data['y_global'], old_control_command[2], 0.0]) - old_control_command) < threshold_command_reached:
+            print("Update command")
+            for i in range(3):
+                if new_control_command[i] - old_control_command[i] > threshold:
+                    new_control_command[i] = old_control_command[i] + threshold
+                elif old_control_command[i] - new_control_command[i] < - threshold:
+                    new_control_command[i] = old_control_command[i] - threshold
+        else:
+            new_control_command = old_control_command
+        #print("Command: ", new_control_command)
         return new_control_command
 
 
     def get_command(self, sensor_data, dt):
         if self.startpos is None:
             self.startpos = [sensor_data['x_global'], sensor_data['y_global']]
+            self.old_control_command = [sensor_data['x_global'], sensor_data['y_global'], 0.1, 0.0]
 
         # Get the current position of the drone
-        current_pos = np.array([sensor_data['x_global'], sensor_data['y_global']])
+        #current_pos = np.array([sensor_data['x_global'], sensor_data['y_global']])
         if self.state == STATE_ON_GROUND:
             if sensor_data['range_down'] > (0.9*CRUISE_HEIGHT - 0.1):
                 self.state = STATE_FORWARD
+                self.old_control_command = [sensor_data['x_global'], sensor_data['y_global'], CRUISE_HEIGHT, 0.0]
                 print("Change state: ", self.state)
             # control_command = [0.0, 0.0, CRUISE_HEIGHT, 0.0]
             control_command = [self.startpos[0], self.startpos[1], CRUISE_HEIGHT, 0.0] #For Hardware drone
-            control_command = self.command_threshold(self.old_control_command, control_command)
+            control_command = self.command_threshold(self.old_control_command, control_command, sensor_data)
             self.old_control_command = control_command
             return control_command
         
         if self.state == STATE_FORWARD:
             # If I find an obstacle with the front sensor I pass to the AVOID FROM RIGHT or LEFTAVOID FROM LEFT states depending on my porition wrt the center of the map
-            if sensor_data['range_front'] < 0.3:
+            if sensor_data['range_front'] < 0.4:
                 if sensor_data['y_global'] > 1.5:
                     self.x_goal = sensor_data['x_global']
                     self.state = STATE_AVOID_FROM_RIGHT
+                    self.old_control_command = [sensor_data['x_global'], sensor_data['y_global'], CRUISE_HEIGHT, 0.0]
                 else:
                     self.x_goal = sensor_data['x_global']
                     self.state = STATE_AVOID_FROM_LEFT
+                    self.old_control_command = [sensor_data['x_global'], sensor_data['y_global'], CRUISE_HEIGHT, 0.0]
                 print("Change state: ", self.state)
 
             # If sensor_data['x_global'] is close to landing_region_x, go to look for pad state
             if sensor_data['x_global'] > landing_region_x - 0.1:
                 self.state = STATE_LOOK4PAD
+                self.old_control_command = [sensor_data['x_global'], sensor_data['y_global'], CRUISE_HEIGHT, 0.0]
                 print("Change state: ", self.state)
             # control_command = [forward_velocity, 0.0, CRUISE_HEIGHT, 0.0]
             control_command = [landing_region_x, 1.5, CRUISE_HEIGHT, 0.0] #For Hardware drone
-            control_command = self.command_threshold(self.old_control_command, control_command)
+            control_command = self.command_threshold(self.old_control_command, control_command, sensor_data)
             self.old_control_command = control_command
             return control_command
         
@@ -147,6 +159,7 @@ class DroneControl:
             # State changes to STATE_AVOID_FROM_LEFT if range_right is less than 0.3 --> I encountered an obstacle on the right so I have to avoid it from the left
             if sensor_data['range_right'] < self.side_obstacle_threshold:
                 self.state = STATE_AVOID_FROM_LEFT
+                self.old_control_command = [sensor_data['x_global'], sensor_data['y_global'], CRUISE_HEIGHT, 0.0]
                 self.x_goal = sensor_data['x_global']
                 self.y_end_obstacle = sensor_data['y_global']
                 print("Change state: ", self.state)
@@ -154,12 +167,13 @@ class DroneControl:
             # State changes if obstacle is avoided
             if sensor_data['range_front'] > self.no_obstacle_threshold:
                 self.state = STATE_MORE_RIGHT
+                self.old_control_command = [sensor_data['x_global'], sensor_data['y_global'], CRUISE_HEIGHT, 0.0]
                 self.x_goal = sensor_data['x_global']
                 self.y_end_obstacle = sensor_data['y_global']
                 print("Change state: ", self.state)
             # control_command = [0.0, -forward_velocity, CRUISE_HEIGHT, 0.0]
             control_command = [self.x_goal, 0.1, CRUISE_HEIGHT, 0.0] #For Hardware drone
-            control_command = self.command_threshold(self.old_control_command, control_command)
+            control_command = self.command_threshold(self.old_control_command, control_command, sensor_data)
             self.old_control_command = control_command
             return control_command
         
@@ -169,6 +183,7 @@ class DroneControl:
             # State changes to STATE_AVOID_FROM_RIGHT if range_left is less than 0.3 --> I encountered an obstacle on the left so I have to avoid it from the right
             if sensor_data['range_left'] < self.side_obstacle_threshold:
                 self.state = STATE_AVOID_FROM_RIGHT
+                self.old_control_command = [sensor_data['x_global'], sensor_data['y_global'], CRUISE_HEIGHT, 0.0]
                 self.x_goal = sensor_data['x_global']
                 self.y_end_obstacle = sensor_data['y_global']
                 print("Change state: ", self.state)
@@ -176,12 +191,13 @@ class DroneControl:
             # State changes if obstacle is avoided
             if sensor_data['range_front'] > self.no_obstacle_threshold:
                 self.state = STATE_MORE_LEFT
+                self.old_control_command = [sensor_data['x_global'], sensor_data['y_global'], CRUISE_HEIGHT, 0.0]
                 self.x_goal = sensor_data['x_global']
                 self.y_end_obstacle = sensor_data['y_global']
                 print("Change state: ", self.state)
             # control_command = [0.0, forward_velocity, CRUISE_HEIGHT, 0.0]
             control_command = [self.x_goal, 2.9, CRUISE_HEIGHT, 0.0] #For Hardware drone
-            control_command = self.command_threshold(self.old_control_command, control_command)
+            control_command = self.command_threshold(self.old_control_command, control_command, sensor_data)
             self.old_control_command = control_command
             return control_command
         
@@ -190,10 +206,11 @@ class DroneControl:
             # If you arrived at the y_end_obstacle - 0.01, you can go forward again
             if sensor_data['y_global'] <= self.y_end_obstacle - 0.1:
                 self.state = STATE_FORWARD
+                self.old_control_command = [sensor_data['x_global'], sensor_data['y_global'], CRUISE_HEIGHT, 0.0]
                 print("Change state: ", self.state)
             # control_command = [0.0, -forward_velocity, CRUISE_HEIGHT, 0.0]
             control_command = [self.x_goal, 0.1, CRUISE_HEIGHT, 0.0] #For Hardware drone
-            control_command = self.command_threshold(self.old_control_command, control_command)
+            control_command = self.command_threshold(self.old_control_command, control_command, sensor_data)
             self.old_control_command = control_command
             return control_command
         
@@ -202,10 +219,11 @@ class DroneControl:
             # If you arrived at the y_end_obstacle + 0.01, you can go forward again
             if sensor_data['y_global'] >= self.y_end_obstacle + 0.1:
                 self.state = STATE_FORWARD
+                self.old_control_command = [sensor_data['x_global'], sensor_data['y_global'], CRUISE_HEIGHT, 0.0]
                 print("Change state: ", self.state)
             # control_command = [0.0, forward_velocity, CRUISE_HEIGHT, 0.0]
             control_command = [self.x_goal, 2.9, CRUISE_HEIGHT, 0.0] #For Hardware drone
-            control_command = self.command_threshold(self.old_control_command, control_command)
+            control_command = self.command_threshold(self.old_control_command, control_command, sensor_data)
             self.old_control_command = control_command
             return control_command
         

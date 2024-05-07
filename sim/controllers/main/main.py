@@ -12,7 +12,7 @@ import sys
 
 exp_num = 3                     # 0: Coordinate Transformation, 1: PID Tuning, 2: Kalman Filter, 3: Practical
 control_style = 'autonomous'      # 'keyboard' or 'autonomous'
-rand_env = True                # Randomise the environment for the practical exercise
+rand_env = False               # Randomise the environment for the practical exercise
 
 path_around_arena = [[0.0, 0.0, 1.0, 0.0], [0.0, 3.0, 1.25, np.pi/2], [5.0, 3.0, 1.5, np.pi], [5.0, 0.0, 0.25, 1.5*np.pi], [0.0, 0.0, 1.0, 0.0]]
 
