@@ -5,9 +5,44 @@ import numpy as np
 
 DPOS = 0.01
 LANDING_REGION_X = 3.5 # TODO
-
+LATERAL_SENSOR_THRESHOLD = 0.3
+FRONT_SENSOR_THRESHOLD = 0.4
 
 class Drone:
+    def run(self):
+        print("Drone run - start")
+        with PositionHlCommander(self._scf) as self.position_commander:
+            # Take off and wait a second
+            time.sleep(1.0)
+
+            # Forward
+            self.forward()
+
+            # Landing pad search
+
+            # Land
+
+            # Take off
+
+            # Return to home position
+
+        print("Drone run - finished")
+
+    def forward(self):
+        while self._x < LANDING_REGION_X:
+            if self._front < FRONT_SENSOR_THRESHOLD:
+                dir = np.sign(self._y - 1.5)
+                while self._front < FRONT_SENSOR_THRESHOLD:
+                    sens = self._left if dir else self._right
+                    if sens < LATERAL_SENSOR_THRESHOLD:
+                        dir = -dir
+                        
+                    self.position_commander.right(dir * DPOS)
+                
+                self.position_commander.right(dir * 5 * DPOS)
+            else:
+                self.position_commander.forward(DPOS)
+
     def __init__(self, scf, home_position):
         print("Init drone - start")
         self.home_position = home_position
@@ -22,38 +57,11 @@ class Drone:
         print("Init drone - resetting kalman estimation")
         # reset kalman filter values
         self._scf.cf.param.set_value('kalman.resetEstimation', '1')
-        time.sleep(1)
+        time.sleep(0.5)
         self._scf.cf.param.set_value('kalman.resetEstimation', '0')
         time.sleep(2)
-
         self._init_logging()
-
-
         print("Init drone - finished")
-
-
-
-    def run(self):
-        print("Drone run - start")
-        with PositionHlCommander(self._scf) as self.position_commander:
-
-            time.sleep(5.0)            
-        print("Drone run - finished")
-
-    def forward(self):
-        while self._x < LANDING_REGION_X:
-            if self._front < 0.4:
-                dir = np.sign(self._y - 1.5)
-                while self._front < 0.4:
-                    sens = self._left if dir else self._right
-                    if sens < 0.4:
-                        dir = -dir
-                        
-                    self.position_commander.right(dir * DPOS)
-                
-                self.position_commander.right(dir * 5 * DPOS)
-            else:
-                self.position_commander.forward(DPOS)
 
 
     def _connected(self, URI):
