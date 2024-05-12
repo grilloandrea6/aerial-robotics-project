@@ -29,19 +29,28 @@ class Drone:
         print("Drone run - finished")
 
     def forward(self):
+        print("FORWARD - start")
         while self._x < LANDING_REGION_X:
             if self._front < FRONT_SENSOR_THRESHOLD:
+                print("Obstacle detected in front")
+
                 dir = np.sign(self._y - 1.5)
+                print("Going right" if dir > 0 else "Going left")
+
                 while self._front < FRONT_SENSOR_THRESHOLD:
                     sens = self._left if dir else self._right
                     if sens < LATERAL_SENSOR_THRESHOLD:
+                        print("Detected lateral obstacle, inverting direction")
                         dir = -dir
                         
                     self.position_commander.right(dir * DPOS)
                 
+                print("Obstacle in front not detected anymore, moving a little bit more")
                 self.position_commander.right(dir * 5 * DPOS)
+
             else:
                 self.position_commander.forward(DPOS)
+        print("FORWARD - finished")
 
     def __init__(self, scf, home_position):
         print("Init drone - start")
