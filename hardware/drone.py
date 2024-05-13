@@ -1,19 +1,23 @@
 from cflib.crazyflie.log import LogConfig
-from cflib.positioning.position_hl_commander import PositionHlCommander
+# from cflib.positioning.position_hl_commander import PositionHlCommander
+from cflib.positioning.motion_commander import MotionCommander
 import time
 import numpy as np
 
 DPOS = 0.01
-LANDING_REGION_X = 3.5 # TODO
-LATERAL_SENSOR_THRESHOLD = 0.3
+DTIME = 0
+LANDING_REGION_X = 2.0 # TODO
+LATERAL_SENSOR_THRESHOLD = 0.25
 FRONT_SENSOR_THRESHOLD = 0.4
+
+FIELD_SIZE_Y = 3.0
 
 class Drone:
     def run(self):
         print("Drone run - start")
-        with PositionHlCommander(self._scf) as self.position_commander:
+        with MotionCommander(self._scf, default_height=0.3) as self.position_commander:
             # Take off and wait a second
-            time.sleep(1.0)
+            time.sleep(2.0)
 
             # Forward
             self.forward()
@@ -34,22 +38,26 @@ class Drone:
             if self._front < FRONT_SENSOR_THRESHOLD:
                 print("Obstacle detected in front")
 
-                dir = np.sign(self._y - 1.5)
+                dir = np.sign(self._y - (FIELD_SIZE_Y / 2))
                 print("Going right" if dir > 0 else "Going left")
 
                 while self._front < FRONT_SENSOR_THRESHOLD:
-                    sens = self._left if dir else self._right
+                    sens = self._right if dir > 0 else self._left
                     if sens < LATERAL_SENSOR_THRESHOLD:
                         print("Detected lateral obstacle, inverting direction")
                         dir = -dir
+                        print("Going right" if dir > 0 else "Going left")
                         
                     self.position_commander.right(dir * DPOS)
+                    time.sleep(DTIME)
                 
                 print("Obstacle in front not detected anymore, moving a little bit more")
-                self.position_commander.right(dir * 5 * DPOS)
+                #self.position_commander.right(dir * DPOS)
+                time.sleep(DTIME)
 
             else:
                 self.position_commander.forward(DPOS)
+                time.sleep(DTIME)
         print("FORWARD - finished")
 
     def __init__(self, scf, home_position):
@@ -128,11 +136,13 @@ class Drone:
         self._left   = self._convert_log_to_distance(data['range.left'])
         self._right  = self._convert_log_to_distance(data['range.right'])
         self._zrange = self._convert_log_to_distance(data['range.zrange'])
+        #print("up: ", self._up, " front: ", self._front, " back: ", self._back, " left: ", self._left, " right: ", self._right, " zrange: ", self._zrange)
+        
 
     def pos_data(self, timestamp, data, logconf):
-        self._x = self._convert_log_to_distance(data['stateEstimate.x'])
-        self._y = self._convert_log_to_distance(data['stateEstimate.y'])
-        self._z = self._convert_log_to_distance(data['stateEstimate.z'])
+        self._x = data['stateEstimate.x'] - self.home_position[0]
+        self._y = data['stateEstimate.y'] - self.home_position[1]
+        self._z = data['stateEstimate.z']
         #print("x: ", self._x, " y: ", self._y, " z: ", self._z)
 
     def _log_error(self, logconf, msg):
@@ -141,10 +151,7 @@ class Drone:
         return
 
     def _convert_log_to_distance(self, data):
-        if data >= 8000:
-            return None
-        else:
-            return data / 1000.0
+        return data / 1000.0
 
     def _connection_failed(self, link_uri, msg):
         """
