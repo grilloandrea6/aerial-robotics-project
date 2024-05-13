@@ -9,8 +9,10 @@ DTIME = 0
 LANDING_REGION_X = 2.0 # TODO
 LATERAL_SENSOR_THRESHOLD = 0.25
 FRONT_SENSOR_THRESHOLD = 0.4
+FIELD_THRESHOLD = 0.2
 
 FIELD_SIZE_Y = 3.0
+GRID_FORWARD_STEP = 0.25
 
 class Drone:
     def run(self):
@@ -23,7 +25,7 @@ class Drone:
             self.forward()
 
             # Landing pad search
-
+            self.grid_search()
             # Land
 
             # Take off
@@ -38,7 +40,7 @@ class Drone:
             if self._front < FRONT_SENSOR_THRESHOLD:
                 print("Obstacle detected in front")
 
-                dir = np.sign(self._y - (FIELD_SIZE_Y / 2))
+                dir = np.sign(self._y - (FIELD_SIZE_Y / 2))  # 1 towards the right, -1 towards the left
                 print("Going right" if dir > 0 else "Going left")
 
                 while self._front < FRONT_SENSOR_THRESHOLD:
@@ -59,6 +61,37 @@ class Drone:
                 self.position_commander.forward(DPOS)
                 time.sleep(DTIME)
         print("FORWARD - finished")
+
+    def grid_search(self):
+        # init
+        dir = np.sign(self._y - (FIELD_SIZE_Y / 2))  # 1 towards the right, -1 towards the left
+        sensor = self._right if dir > 0 else self._left
+        border = 0 if dir > 0 else FIELD_SIZE_Y
+        reached = False
+        while not reached:
+            # check for landing
+            if abs(self._y - border) < FIELD_THRESHOLD:
+                # context change
+                dir = -dir
+                sensor = self._right if dir > 0 else self._left
+                border = 0 if dir > 0 else FIELD_SIZE_Y
+                self.position_commander.forward(GRID_FORWARD_STEP)
+            if sensor > LATERAL_SENSOR_THRESHOLD:
+                self.position_commander.right(dir * DPOS)  # go towards dir
+            else:
+                # obstacle detected
+                start = self._x
+                while sensor < LATERAL_SENSOR_THRESHOLD:
+                    self.position_commander.forward(DPOS)
+                self.position_commander.forward(5 * DPOS)
+                stop = self._x
+                self.position_commander.right(5 * dir * DPOS)
+                while self._back < FRONT_SENSOR_THRESHOLD:
+                    self.position_commander.backward(dir * DPOS)
+                self.position_commander.right(5 * dir * DPOS)
+                self.position_commander.forward(start - stop)
+                # obstacle avoided
+
 
     def __init__(self, scf, home_position):
         print("Init drone - start")
