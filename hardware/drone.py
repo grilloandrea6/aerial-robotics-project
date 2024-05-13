@@ -4,7 +4,7 @@ from cflib.positioning.motion_commander import MotionCommander
 import time
 import numpy as np
 
-DPOS = 0.01
+DPOS = 0.005
 DTIME = 0
 LANDING_REGION_X = 2.0 # TODO
 LATERAL_SENSOR_THRESHOLD = 0.25
@@ -13,6 +13,10 @@ FIELD_THRESHOLD = 0.2
 
 FIELD_SIZE_Y = 3.0
 GRID_FORWARD_STEP = 0.25
+
+Z_ALPHA = 0.3 # Z EMA PARAMETER
+
+LANDING_PAD_DETECTION_THRESHOLD = 0.03
 
 class Drone:
     def run(self):
@@ -62,6 +66,13 @@ class Drone:
                 time.sleep(DTIME)
         print("FORWARD - finished")
 
+    def filter_zrange(self):
+        self._zrange_filt = self._zrange_filt * Z_ALPHA + self._zrange * (1.0 - Z_ALPHA)
+        return self._zrange_filt
+
+    def landing_pad_detected(self):
+        return abs(self._zrange - self._zrange_filt) > LANDING_PAD_DETECTION_THRESHOLD
+    
     def grid_search(self):
         # init
         dir = np.sign(self._y - (FIELD_SIZE_Y / 2))  # 1 towards the right, -1 towards the left
@@ -103,6 +114,8 @@ class Drone:
         self._scf.cf.disconnected.add_callback(self._disconnected)
         self._scf.cf.connection_failed.add_callback(self._connection_failed)
         self._scf.cf.connection_lost.add_callback(self._connection_lost)
+
+        self._zrange_filt = 0.0
         
         print("Init drone - resetting kalman estimation")
         # reset kalman filter values
@@ -169,6 +182,7 @@ class Drone:
         self._left   = self._convert_log_to_distance(data['range.left'])
         self._right  = self._convert_log_to_distance(data['range.right'])
         self._zrange = self._convert_log_to_distance(data['range.zrange'])
+        self.filter_zrange()
         #print("up: ", self._up, " front: ", self._front, " back: ", self._back, " left: ", self._left, " right: ", self._right, " zrange: ", self._zrange)
         
 
