@@ -3,6 +3,7 @@ from cflib.crazyflie.log import LogConfig
 from cflib.positioning.motion_commander import MotionCommander
 import time
 import numpy as np
+import sys
 
 DPOS = 0.005
 DTIME = 0
@@ -14,9 +15,9 @@ FIELD_THRESHOLD = 0.2
 FIELD_SIZE_Y = 3.0
 GRID_FORWARD_STEP = 0.25
 
-Z_ALPHA = 0.3 # Z EMA PARAMETER
+Z_ALPHA = 0.92 # Z EMA PARAMETER
 
-LANDING_PAD_DETECTION_THRESHOLD = 0.03
+LANDING_PAD_DETECTION_THRESHOLD = 0.018
 
 class Drone:
     def run(self):
@@ -26,11 +27,20 @@ class Drone:
             time.sleep(2.0)
 
             # Forward
-            self.forward()
+            #self.forward()
 
             # Landing pad search
-            self.grid_search()
+            #self.grid_search()
             # Land
+            for _ in range(20):
+                self.position_commander.forward(DPOS)
+            while True:
+
+                print(abs(self._zrange -  self._zrange_filt))
+                if self.landing_pad_detected():
+                    break
+                self.position_commander.forward(DPOS)
+
 
             # Take off
 
@@ -58,7 +68,7 @@ class Drone:
                     time.sleep(DTIME)
                 
                 print("Obstacle in front not detected anymore, moving a little bit more")
-                #self.position_commander.right(dir * DPOS)
+                self.position_commander.right(dir * DPOS)
                 time.sleep(DTIME)
 
             else:
@@ -71,37 +81,68 @@ class Drone:
         return self._zrange_filt
 
     def landing_pad_detected(self):
-        return abs(self._zrange - self._zrange_filt) > LANDING_PAD_DETECTION_THRESHOLD
+        detected = (abs(self._zrange - self._zrange_filt) > LANDING_PAD_DETECTION_THRESHOLD)
+        if detected:
+            print("Landing pad detected!")
+        return detected
     
     def grid_search(self):
+        print("GRID SEARCH - start")
+        sys.stdout.flush()
         # init
         dir = np.sign(self._y - (FIELD_SIZE_Y / 2))  # 1 towards the right, -1 towards the left
         sensor = self._right if dir > 0 else self._left
         border = 0 if dir > 0 else FIELD_SIZE_Y
         reached = False
-        while not reached:
+        while not reached: 
+            sensor = self._right if dir > 0 else self._left
+            print("Sensor: ", sensor)
+            sys.stdout.flush()
             # check for landing
             if abs(self._y - border) < FIELD_THRESHOLD:
                 # context change
                 dir = -dir
-                sensor = self._right if dir > 0 else self._left
                 border = 0 if dir > 0 else FIELD_SIZE_Y
                 self.position_commander.forward(GRID_FORWARD_STEP)
             if sensor > LATERAL_SENSOR_THRESHOLD:
+                print("via libera")
+                sys.stdout.flush()
                 self.position_commander.right(dir * DPOS)  # go towards dir
             else:
                 # obstacle detected
                 start = self._x
+                print("Obstacle detected")
+                
                 while sensor < LATERAL_SENSOR_THRESHOLD:
+                    sensor = self._right if dir > 0 else self._left
+
                     self.position_commander.forward(DPOS)
-                self.position_commander.forward(5 * DPOS)
-                stop = self._x
-                self.position_commander.right(5 * dir * DPOS)
+                print("ostacolo superato")
+                self.position_commander.forward(10 * DPOS)
+                print("ci spostiamo")
+
+                for _ in range(80):
+                    self.position_commander.right(dir * DPOS)
+                print("ci siamo spostati")
+
                 while self._back < FRONT_SENSOR_THRESHOLD:
-                    self.position_commander.backward(dir * DPOS)
-                self.position_commander.right(5 * dir * DPOS)
-                self.position_commander.forward(start - stop)
+                    print("entro qui?")
+                    sensor = self._right if dir > 0 else self._left
+                    self.position_commander.right(dir * DPOS)
+
+                for _ in range(80):
+                    self.position_commander.right(dir * DPOS)
+
+                print("ora vado indietro")
+                while self._x > start:
+                    print("e invece qui entro?")
+                    print(self._x, start)
+                    self.position_commander.forward(-DPOS)
+                print("ostacolo superato")
                 # obstacle avoided
+            reached = self.landing_pad_detected()
+
+        print("GRID SEARCH - finished")
 
 
     def __init__(self, scf, home_position):
@@ -183,12 +224,13 @@ class Drone:
         self._right  = self._convert_log_to_distance(data['range.right'])
         self._zrange = self._convert_log_to_distance(data['range.zrange'])
         self.filter_zrange()
+
         #print("up: ", self._up, " front: ", self._front, " back: ", self._back, " left: ", self._left, " right: ", self._right, " zrange: ", self._zrange)
         
 
     def pos_data(self, timestamp, data, logconf):
-        self._x = data['stateEstimate.x'] - self.home_position[0]
-        self._y = data['stateEstimate.y'] - self.home_position[1]
+        self._x = data['stateEstimate.x'] + self.home_position[0]
+        self._y = data['stateEstimate.y'] + self.home_position[1]
         self._z = data['stateEstimate.z']
         #print("x: ", self._x, " y: ", self._y, " z: ", self._z)
 
