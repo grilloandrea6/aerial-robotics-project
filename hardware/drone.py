@@ -5,9 +5,9 @@ import time
 import numpy as np
 import sys
 
-DPOS = 0.005
+DPOS = 0.01
 DTIME = 0
-LANDING_REGION_X = 2.0 # TODO
+LANDING_REGION_X = 4.0 # TODO
 LATERAL_SENSOR_THRESHOLD = 0.25
 FRONT_SENSOR_THRESHOLD = 0.4
 FIELD_THRESHOLD = 0.2
@@ -24,7 +24,18 @@ class Drone:
         print("Drone run - start")
         with MotionCommander(self._scf, default_height=0.3) as self.position_commander:
             # Take off and wait a second
-            time.sleep(2.0)
+            # time.sleep(6.0)
+            # self.position_commander.forward(3)
+
+            time.sleep(1.0)
+
+            self.forward_bis()
+            print("after forward bis!!")
+            for _ in range(200):
+                print("y", self._y)
+                time.sleep(0.01)
+            
+
 
             # Forward
             #self.forward()
@@ -32,14 +43,14 @@ class Drone:
             # Landing pad search
             #self.grid_search()
             # Land
-            for _ in range(20):
-                self.position_commander.forward(DPOS)
-            while True:
+            # for _ in range(20):
+            #     self.position_commander.forward(DPOS)
+            # while True:
 
-                print(abs(self._zrange -  self._zrange_filt))
-                if self.landing_pad_detected():
-                    break
-                self.position_commander.forward(DPOS)
+            #     print(abs(self._zrange -  self._zrange_filt))
+            #     if self.landing_pad_detected():
+            #         break
+            #     self.position_commander.forward(DPOS)
 
 
             # Take off
@@ -76,6 +87,135 @@ class Drone:
                 time.sleep(DTIME)
         print("FORWARD - finished")
 
+
+    def forward_bis(self):
+        print("GRID_SEARCH - start")
+        lat_obstacle = False
+        myflag = 0
+
+        while self._x < LANDING_REGION_X:
+            # parte che resetta la modalita' di NON ostacolo
+            sens = self._right if self._right < self._left else self._left
+            if sens > LATERAL_SENSOR_THRESHOLD:
+                for _ in range(3):
+                    self.position_commander.forward(DPOS)
+                    time.sleep(DTIME)
+                lat_obstacle = False
+
+            # Parte che va al centro se non sono al centro
+            if abs(self._y - (FIELD_SIZE_Y / 2)) > 0.1 and not lat_obstacle and myflag<=0:
+                print("Moving towards the center")
+                dir = np.sign(self._y - (FIELD_SIZE_Y / 2))
+                while np.abs(self._y - (FIELD_SIZE_Y / 2)) > 0.1:
+                    print("differenza dal centro", abs(self._y - (FIELD_SIZE_Y / 2)))
+                    print("y", self._y)
+                    sens = self._right if dir > 0 else self._left
+                    if sens < LATERAL_SENSOR_THRESHOLD:
+                        print("Detected lateral obstacle, just go forward")
+                        lat_obstacle = True
+                        break
+                    self.position_commander.right(dir * DPOS)
+                    time.sleep(DTIME)
+                
+
+            # Parte per obstacle avoidance
+            if self._front < FRONT_SENSOR_THRESHOLD:
+                print("Obstacle detected in front")
+
+                dir = np.sign(self._y - (FIELD_SIZE_Y / 2))  # 1 towards the right, -1 towards the left
+                print("Going right" if dir > 0 else "Going left")
+
+                while self._front < FRONT_SENSOR_THRESHOLD:
+                    sens = self._right if dir > 0 else self._left
+                    if sens < LATERAL_SENSOR_THRESHOLD:
+                        print("Detected lateral obstacle, inverting direction")
+                        dir = -dir
+                        print("Going right" if dir > 0 else "Going left")
+                        
+                    self.position_commander.right(dir * DPOS)
+                    time.sleep(DTIME)
+                    # print("differenza dal centro", abs(self._y - (FIELD_SIZE_Y / 2)))
+                myflag=70
+                
+                print("Obstacle in front not detected anymore, moving a little bit more")
+                for _ in range(2):
+                    self.position_commander.right(dir * DPOS)
+                    time.sleep(DTIME)
+            # Parte che va a dritto se non e' ostacolo e se sono al centro
+            else:
+                # print("differenza dal centro", abs(self._y - (FIELD_SIZE_Y / 2)))
+                myflag-=1
+                self.position_commander.forward(DPOS)
+                time.sleep(DTIME)
+        print("FORWARD - finished")
+
+
+    # GRID SEARCH----------------------------------------------------------------------
+    def grid_search(self): #to be rotated of 90 degrees
+        print("GRID_SEARCH - start")
+        lat_obstacle = False
+        myflag = 0
+
+        # 
+        while 0.2 < self._y < FIELD_SIZE_Y-0.2:
+            # parte che resetta la modalita' di NON ostacolo
+            sens = self._right if self._right < self._left else self._left
+            if sens > LATERAL_SENSOR_THRESHOLD:
+                lat_obstacle = False
+
+            # Parte che va al centro se non sono al centro
+            if abs(self._y - (FIELD_SIZE_Y / 2)) > 0.1 and not lat_obstacle and myflag<=0:
+                print("Moving towards the center")
+                dir = np.sign(self._y - (FIELD_SIZE_Y / 2))
+                while np.abs(self._y - (FIELD_SIZE_Y / 2)) > 0.1:
+                    print("differenza dal centro", abs(self._y - (FIELD_SIZE_Y / 2)))
+                    print("y", self._y)
+                    sens = self._right if dir > 0 else self._left
+                    if sens < LATERAL_SENSOR_THRESHOLD:
+                        print("Detected lateral obstacle, just go forward")
+                        lat_obstacle = True
+                        break
+                    self.position_commander.right(dir * DPOS)
+                    time.sleep(DTIME)
+                
+
+            # Parte per obstacle avoidance
+            if self._front < FRONT_SENSOR_THRESHOLD:
+                print("Obstacle detected in front")
+
+                dir = np.sign(self._y - (FIELD_SIZE_Y / 2))  # 1 towards the right, -1 towards the left
+                print("Going right" if dir > 0 else "Going left")
+
+                while self._front < FRONT_SENSOR_THRESHOLD:
+                    sens = self._right if dir > 0 else self._left
+                    if sens < LATERAL_SENSOR_THRESHOLD:
+                        print("Detected lateral obstacle, inverting direction")
+                        dir = -dir
+                        print("Going right" if dir > 0 else "Going left")
+                        
+                    self.position_commander.right(dir * DPOS)
+                    time.sleep(DTIME)
+                    # print("differenza dal centro", abs(self._y - (FIELD_SIZE_Y / 2)))
+                myflag=70
+                
+                print("Obstacle in front not detected anymore, moving a little bit more")
+                for _ in range(2):
+                    self.position_commander.right(dir * DPOS)
+                    time.sleep(DTIME)
+            # Parte che va a dritto se non e' ostacolo e se sono al centro
+            else:
+                # print("differenza dal centro", abs(self._y - (FIELD_SIZE_Y / 2)))
+                myflag-=1
+                self.position_commander.forward(DPOS)
+                time.sleep(DTIME)
+        print("FORWARD - finished")
+
+        for _ in range(2):
+                    self.position_commander.forware(dir * DPOS)
+                    time.sleep(DTIME)
+    #----------------------------------------------------------------------------------
+    
+
     def filter_zrange(self):
         self._zrange_filt = self._zrange_filt * Z_ALPHA + self._zrange * (1.0 - Z_ALPHA)
         return self._zrange_filt
@@ -86,64 +226,7 @@ class Drone:
             print("Landing pad detected!")
         return detected
     
-    def grid_search(self):
-        print("GRID SEARCH - start")
-        sys.stdout.flush()
-        # init
-        dir = np.sign(self._y - (FIELD_SIZE_Y / 2))  # 1 towards the right, -1 towards the left
-        sensor = self._right if dir > 0 else self._left
-        border = 0 if dir > 0 else FIELD_SIZE_Y
-        reached = False
-        while not reached: 
-            sensor = self._right if dir > 0 else self._left
-            print("Sensor: ", sensor)
-            sys.stdout.flush()
-            # check for landing
-            if abs(self._y - border) < FIELD_THRESHOLD:
-                # context change
-                dir = -dir
-                border = 0 if dir > 0 else FIELD_SIZE_Y
-                self.position_commander.forward(GRID_FORWARD_STEP)
-            if sensor > LATERAL_SENSOR_THRESHOLD:
-                print("via libera")
-                sys.stdout.flush()
-                self.position_commander.right(dir * DPOS)  # go towards dir
-            else:
-                # obstacle detected
-                start = self._x
-                print("Obstacle detected")
-                
-                while sensor < LATERAL_SENSOR_THRESHOLD:
-                    sensor = self._right if dir > 0 else self._left
-
-                    self.position_commander.forward(DPOS)
-                print("ostacolo superato")
-                self.position_commander.forward(10 * DPOS)
-                print("ci spostiamo")
-
-                for _ in range(80):
-                    self.position_commander.right(dir * DPOS)
-                print("ci siamo spostati")
-
-                while self._back < FRONT_SENSOR_THRESHOLD:
-                    print("entro qui?")
-                    sensor = self._right if dir > 0 else self._left
-                    self.position_commander.right(dir * DPOS)
-
-                for _ in range(80):
-                    self.position_commander.right(dir * DPOS)
-
-                print("ora vado indietro")
-                while self._x > start:
-                    print("e invece qui entro?")
-                    print(self._x, start)
-                    self.position_commander.forward(-DPOS)
-                print("ostacolo superato")
-                # obstacle avoided
-            reached = self.landing_pad_detected()
-
-        print("GRID SEARCH - finished")
-
+    
 
     def __init__(self, scf, home_position):
         print("Init drone - start")
