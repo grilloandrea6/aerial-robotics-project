@@ -15,44 +15,55 @@ FIELD_THRESHOLD = 0.2
 FIELD_SIZE_Y = 3.0
 GRID_FORWARD_STEP = 0.25
 
-Z_ALPHA = 0.92 # Z EMA PARAMETER
-
-LANDING_PAD_DETECTION_THRESHOLD = 0.035 #0.018
-
 class Drone:
+    def __init__(self, scf, home_position):
+        print("Init drone - start")
+        self.home_position = home_position
+        self._x_off = self.home_position[0]
+        self._y_off = self.home_position[1]
+        self._z_off = self.home_position[2]
+        self._scf = scf
+
+        # Connection callback
+        self._scf.cf.connected.add_callback(self._connected)
+        self._scf.cf.disconnected.add_callback(self._disconnected)
+        self._scf.cf.connection_failed.add_callback(self._connection_failed)
+        self._scf.cf.connection_lost.add_callback(self._connection_lost)
+
+        self._init_logging()
+
+        print("Init drone - finished")
+
     def run(self):
         print("Drone run - start")
-        self.position_commander = MotionCommander(self._scf, default_height=0.3)
-        self.position_commander.take_off(velocity=10.0)
-
-        #with MotionCommander(self._scf, default_height=0.3) as self.position_commander:
+        with MotionCommander(self._scf, default_height=0.3) as self.position_commander:
             # Take off and wait a second
-        time.sleep(1.0)
-        
-        # self.spiral()
-        # time.sleep(1.0)
-        # return
+            time.sleep(1.0)
+            
+            # self.spiral()
+            # time.sleep(1.0)
+            # return
 
-        self.forward()
-        time.sleep(1.0)
-        self.grid_search()
-        
-        time.sleep(1)
-        self.cross()
-        
-        return
-        self.position_commander.land()
-        self._x_off = self._x
-        self._y_off = self._y
-        time.sleep(1.0)
-        self.position_commander.take_off()
-        time.sleep(1.0)
-        self.backward()
-        print("Final coordinates: ", self._x, self._y)
-        self.position_commander.__exit__(None, None, None)
+            self.forward()
+            time.sleep(1.0)
+            self.grid_search()
+            
+            time.sleep(1)
+            self.cross()
+            
+            return
+            self.position_commander.land()
+            self._x_off = self._x
+            self._y_off = self._y
+            time.sleep(1.0)
+            self.position_commander.take_off()
+            time.sleep(1.0)
+            self.backward()
+            print("Final coordinates: ", self._x, self._y)
+            self.position_commander.__exit__(None, None, None)
 
 
-        print("Drone run - finished")
+            print("Drone run - finished")
 
 
     def cross(self):
@@ -109,9 +120,7 @@ class Drone:
             self.position_commander.right(DPOS)
             time.sleep(DTIME)
 
-        print("CROSS - finished")
-
-    
+        print("CROSS - finished")    
 
     def forward(self):
         print("FORWARD - start")
@@ -236,8 +245,6 @@ class Drone:
         print("FORWARD - finished")
         return False
 
-
-    # GRID SEARCH----------------------------------------------------------------------
     def grid_search(self): #to be rotated of 90 degrees
         print("GRID_SEARCH - start")
         lat_obstacle = False
@@ -282,9 +289,6 @@ class Drone:
                             return True
                 time.sleep(DTIME)
             print("GS: ricomincio su nuovo setpoint: ", setpoints[i])
-    #----------------------------------------------------------------------------------
-
-
 
     def backward(self):
         print("BACKWARD - start")
@@ -361,8 +365,6 @@ class Drone:
                 if self.movement(dir, dist):
                     return
                 dist += 8
-            
-
     
     def movement(self, dir, dist):
         if dir == 0:
@@ -379,54 +381,10 @@ class Drone:
                 return True
             time.sleep(DTIME)
         return False
-        
-
-    
-
-    def filter_zrange(self):
-        self._zrange_filt = self._zrange_filt * Z_ALPHA + self._zrange * (1.0 - Z_ALPHA)
-        return self._zrange_filt
 
     def landing_pad_detected(self):
-        detected = ((abs(self._z - .3) > 0.08))
-        #detected = (abs(self._zrange - self._zrange_filt) > LANDING_PAD_DETECTION_THRESHOLD)
-        # if detected:
-        #     print("Landing pad detected!")
+        detected = ((abs(self._z - .3) > 0.08)) #ToDo
         return detected
-    
-    
-
-    def __init__(self, scf, home_position):
-        print("Init drone - start")
-        self.home_position = home_position
-        self._x_off = self.home_position[0]
-        self._y_off = self.home_position[1]
-        self._scf = scf
-
-        # Connection callback
-        self._scf.cf.connected.add_callback(self._connected)
-        self._scf.cf.disconnected.add_callback(self._disconnected)
-        self._scf.cf.connection_failed.add_callback(self._connection_failed)
-        self._scf.cf.connection_lost.add_callback(self._connection_lost)
-
-        self._zrange_filt = 0.0
-
-        self.detected = False
-
-
-        # Dir variables
-        self.dir_long = None # longitudinal direction
-        self.dir_lat = None  # lateral direction
-        
-        # print("Init drone - resetting kalman estimation")
-        # # reset kalman filter values
-        # self._scf.cf.param.set_value('kalman.resetEstimation', '1')
-        # time.sleep(0.5)
-        # self._scf.cf.param.set_value('kalman.resetEstimation', '0')
-        # time.sleep(2)
-        self._init_logging()
-        print("Init drone - finished")
-
 
     def _connected(self, URI):
         print('We are now connected to {}'.format(URI))
@@ -483,22 +441,12 @@ class Drone:
         self._left   = self._convert_log_to_distance(data['range.left'])
         self._right  = self._convert_log_to_distance(data['range.right'])
         self._zrange = self._convert_log_to_distance(data['range.zrange'])
-        self.filter_zrange()
-        # if(self.landing_pad_detected()):
-        #     # self.detected = True
-        #     print()
-        #     print()
-        #     print("Landing pad detected!")
-        #     print()
-        #     print()
-
         #print("up: ", self._up, " front: ", self._front, " back: ", self._back, " left: ", self._left, " right: ", self._right, " zrange: ", self._zrange)
         
-
     def pos_data(self, timestamp, data, logconf):
         self._x = data['stateEstimate.x'] + self._x_off
         self._y = data['stateEstimate.y'] + self._y_off
-        self._z = data['stateEstimate.z']
+        self._z = data['stateEstimate.z'] + self._z_off
         #print("x: ", self._x, " y: ", self._y, " z: ", self._z)
 
     def _log_error(self, logconf, msg):
