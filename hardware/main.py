@@ -12,7 +12,7 @@ if __name__ == '__main__':
     cflib.crtp.init_drivers()
 
     # Define the home position (X,Y) of take off pad
-    home = np.array([3.05,.75, 0.3])
+    home = np.array([0.15,0.75, 0.12])
 
     uri = 'radio://0/37/2M/E7E7E70101'
 
