@@ -77,29 +77,19 @@ class Drone:
         self.position_commander = MotionCommander(self._scf, default_height=self.cruise_height)
         self.position_commander.take_off(velocity=10.0)
 
-        # # Go to center point
-        # direction = 2
-        # center = [-.15,0]
+        
 
-        # while abs((self._y if direction % 2 else self._x) - center[direction % 2]) > 0.03:
-        #     print("ciclo di allineamento")
+        time.sleep(3.0)
+        self.init_detection()
+        time.sleep(4.0)
+        
+        while not self.detected:
+            self.position_commander.back(DPOS)
+            time.sleep(DTIME)
 
-        #     while abs((self._y if direction % 2 else self._x) - center[direction % 2]) > 0.02:
-        #         sys.stdout.flush()
-                
-        #         a = int(-np.sign((self._y if direction % 2 else self._x) - center[direction % 2]) + 1)
-                
-        #         print((direction+a)%4, end=" ")
-
-        #         self.movement_cross((direction+a)%4) #opposite directon
-        #     print()
-        #     sys.stdout.flush()
-        #     time.sleep(0.2)
-                
-        # print()
-        # sys.stdout.flush()
-        # time.sleep(0.2)
-
+        self.cross(2)
+        time.sleep(1)
+        return
 
 
         self.forward()
@@ -126,196 +116,59 @@ class Drone:
  
 
 
-    # def movement_cross(self, dir):
-    #     if dir == 0:
-    #         func = self.position_commander.forward
-    #     elif dir == 1:
-    #         func = self.position_commander.left
-    #     elif dir == 2:
-    #         func = self.position_commander.back
-    #     elif dir == 3:
-    #         func = self.position_commander.right
+    def movement_cross(self, dir):
+        if dir == 0:
+            func = self.position_commander.forward
+        elif dir == 1:
+            func = self.position_commander.left
+        elif dir == 2:
+            func = self.position_commander.back
+        elif dir == 3:
+            func = self.position_commander.right
         
-    #     func(DPOS)
-    #     time.sleep(DTIME)
+        func(DPOS)
+        time.sleep(DTIME)
         
-    # def cross(self, direction):
-    #     print("CROSS - start")
-    #     center = [0,0]
-    #     # Se non vediamo più il pad ci spostiamo un po' nella direzione in cui andavamo
-    #     print("se sono uscito dal pad ci rientro: ", end="")
-    #     while not self.detected:
-    #         print("-",end="")
-    #         self.movement_cross(direction)
-    #     print("finito")
-
-    #     first_point = (self._x, self._y)
-    #     print("we are on the pad, saving point: ", first_point)
+    def cross(self, direction):
         
-    #     # a questo punto seguiamo detection fino a che non siamo più sopra il pad
-    #     # TODO oppure se superiamo XX (50?) cm  
-    #     counter = 0
-    #     print("moving on the pad until the end: ", end="")
-    #     while self.detected:
+        points = []
+        print("CROSS - start")
 
-    #         if counter * DPOS >= .50:
-    #             for _ in range(10):
-    #                 print("non ho trovato la fine del pad, mi fermo")
-    #             break
-            
-    #         self.movement_cross(direction)
-    #         print("-",end="") #"a me me piace a NUTELLAAAAAA, gelato ca panna")
+        # vado avanti di 45
+        for _ in range(45):
+            if self.detected:
+                points.append((self._x, self._y))
+            self.movement_cross(direction)
 
-    #     print("finito")
+        # torno indietro di 30
+        for _ in range(55):
+            if self.detected:
+                points.append((self._x, self._y))
+            self.movement_cross((direction + 2) % 4)
 
-    #     last_point = (self._x, self._y)
-    #     print("arrived on the other side: ", last_point)
+        # vado a sinistra di 30
+        for _ in range(45):
+            if self.detected:
+                points.append((self._x, self._y))
+            self.movement_cross((direction + 1) % 4)
 
-    #     print("moving a little bit more")
-    #     for _ in range(45): 
-    #         self.movement_cross(direction)
+        # vado a destra di 60
+        for _ in range(45):
+            if self.detected:
+                points.append((self._x, self._y))
+            self.movement_cross((direction + 3) % 4)
 
-
+        mean_x = sum(p[0] for p in points)/len(points)
+        mean_y = sum(p[1] for p in points)/len(points)
+        print("points: ", points)
+        print("number of points: ", len(points))
+        print("center of the cross: ", mean_x, mean_y)
+        print("actual position: ", self._x, self._y)
+        self.position_commander.move_distance(mean_x - self._x, mean_y - self._y, 0.0)
         
-    #     dist = (first_point[direction % 2] - last_point[direction % 2])
+        return
         
-    #     # TODO se la distanza è troppo poca che si fa? 
-    #     # wheighted average with more weight on last _point
         
-    #     center[direction % 2] = first_point[direction % 2] - 1.1 * dist / 2
-        
-
-    #     print("ora non è detected, siamo fuori. detected: ", self.detected)
-
-    #     print("go to center point, dist: ", dist, "center",  center)
-    #     #DPOS /= 3
-    #     while abs((self._y if direction % 2 else self._x) - center[direction % 2]) > 0.02:
-    #         print("ciclo di allineamento")
-
-    #         while abs((self._y if direction % 2 else self._x) - center[direction % 2]) > 0.02:
-    #             sys.stdout.flush()
-                
-    #             a = int(-np.sign((self._y if direction % 2 else self._x) - center[direction % 2]) + 1)
-                
-    #             print((direction+a)%4, end=" ")
-
-    #             self.movement_cross((direction+a)%4) #opposite directon
-    #         print()
-    #         sys.stdout.flush()
-    #         time.sleep(0.2)
-
-    #     # for _ in range(30):
-    #     #     self.movement_cross(direction) #opposite directon
-
-                
-    #     print()
-
-    #     print("alignment finished, we are at: ", self._x, self._y)
-    #     sys.stdout.flush()
-
-        
-
-
-    #     direction = (direction - 1) % 4 #orthogonal direction------------
-    #     print("now changing direction to: ", direction)
-    #     print("going outside")
-    #     print("is it detected?", self.detected)
-
-    #     print("going outside: ", end="")
-    #     while self.detected :
-    #         print("-", end="")
-    #         self.movement_cross(direction)
-    #     print("finito, esco ancora un po'")
-
-    #     for _ in range(45):
-    #         self.movement_cross(direction)
-        
-    #     print("uscito cazzo")
-
-    #     direction = (direction + 2) % 4
-    #     print("inverting direction to: ", direction)
-    #     # a questo punto seguiamo detection fino a che non siamo più sopra il pad
-    #     # TODO oppure se superiamo XX (50?) cm  
-    #     print("mi muovo verso il pad finché non lo trovo: ", end="")
-    #     while not self.detected :
-    #         print("-", end="")
-    #         self.movement_cross(direction)
-    #     print("trovato!")
-
-    #     first_point = (self._x, self._y)
-    #     print("saving first point", first_point)
-
-    #     print("mi muovo sul pad finche non finisce", end="")
-    #     while self.detected :
-    #         print("-", end="")
-    #         self.movement_cross(direction)
-
-    #     print("finito il pad")
-            
-    #     last_point = (self._x, self._y)
-    #     print("saving last point", last_point)
-        
-    #     dist = (first_point[direction % 2] - last_point[direction % 2])
-        
-    #     # TODO se la distanza è troppo poca che si fa? 
-
-    #     center[direction % 2] = first_point[direction % 2] - 1.1 * dist / 2
-
-    #     print("center finale: ", center)     
-        
-    #     print("esco ancora un po': ", end="")
-    #     for _ in range(45):
-    #         print("-", end="")
-    #         self.movement_cross(direction)   
-    #     print("sono uscito, ora mi allineo al centro")
-    #     # Go to center point
-
-
-    #     while abs((self._y if direction % 2 else self._x) - center[direction % 2]) > 0.03:
-    #         print("ciclo di allineamento")
-
-    #         while abs((self._y if direction % 2 else self._x) - center[direction % 2]) > 0.02:
-    #             sys.stdout.flush()
-                
-    #             a = int(-np.sign((self._y if direction % 2 else self._x) - center[direction % 2]) + 1)
-                
-    #             print((direction+a)%4, end=" ")
-
-    #             self.movement_cross((direction+a)%4) #opposite directon
-    #         print()
-    #         sys.stdout.flush()
-    #         time.sleep(0.2)
-                
-    #     print()
-    #     return
-    
-    #     while np.linalg.norm(np.array([self._x - center[0],self._y - center[1]])) > 0.03:
-    #         print("allineo 1 direzione: ", end="")
-    #         # Go to center point
-    #         while abs((self._y if direction % 2 else self._x) - center[direction % 2]) > 0.02:
-    #             print("-", end="")
-    #             a = - np.sign((self._y if direction % 2 else self._x) - center[direction % 2]) + 1
-    #             self.movement_cross((direction+a)%4) #opposite directon
-    #         print()
-
-    #         # time.sleep(1)
-    #         # print("fine")
-    #         # return
-    #         direction = (direction + 1 ) % 4
-    #         print("allineo altra direzione: ", end="")
-    #         while abs((self._y if direction % 2 else self._x) - center[direction % 2]) > 0.01:
-    #             print("-", end="")
-    #             a = np.sign((self._y if direction % 2 else self._x) - center[direction % 2]) + 1
-    #             self.movement_cross((direction+a)%4) #opposite directon
-    #         print()
-    #         direction = (direction + 1 ) % 4
-
-    #     print("actual point", self._x,self._y)
-
-    #     # now center should be right, and we should be at the center of the landing pad
-    #     print("CROSS - finished")    
-    #     return
-
     def forward(self):
         print("FORWARD - start")
         while self._x < LANDING_REGION_X:
