@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from cflib.crazyflie.log import LogConfig
 # from cflib.positioning.position_hl_commander import PositionHlCommander
 from cflib.positioning.motion_commander import MotionCommander
@@ -12,10 +13,20 @@ LATERAL_SENSOR_THRESHOLD = 0.17
 FRONT_SENSOR_THRESHOLD = 0.325
 FIELD_THRESHOLD = 0.2
 
+
+MAX_X     = 5.0 # meter
+MAX_Y     = 3.0 # meter
+RES_POS   = 0.01 # meter
+
 FIELD_SIZE_Y = 3.0
 GRID_FORWARD_STEP = 0.25
 
 ALPHA = 0.05
+
+FORWARD = 0
+LEFT = 1
+BACK = 2
+RIGHT = 3
 
 class Drone:
     def __init__(self, scf, home_position):
@@ -35,6 +46,7 @@ class Drone:
         self.cruise_height = 0.30
 
         self._z = 0
+        self.cross_active = False
         self.init_detection()
         self._init_logging()
 
@@ -61,7 +73,9 @@ class Drone:
         self.old_overshoot = overshoot
         self.old_undershoot = undershoot  
 
-        #self.detected = False   
+        if self.cross_active and self.detected:
+            x, y = self.point_to_map_cell(self._x, self._y)
+            self.map[x, y] = 1
 
     def init_detection(self):
         self.detected = False
@@ -77,31 +91,31 @@ class Drone:
         self.position_commander = MotionCommander(self._scf, default_height=self.cruise_height)
         self.position_commander.take_off(velocity=10.0)
 
-        
+        # time.sleep(4.0)
+        # self.init_detection()
+        # time.sleep(4.0)
 
-        time.sleep(3.0)
-        self.init_detection()
+        # while not self.detected:
+        #     self.position_commander.forward(DPOS)
+        #     time.sleep(DTIME)
+
+        # self.cross(0)
+        # self.position_commander.land()
+        # return
+
+
         time.sleep(4.0)
-        
-        while not self.detected:
-            self.position_commander.back(DPOS)
-            time.sleep(DTIME)
-
-        self.cross(2)
-        time.sleep(1)
-        return
-
 
         self.forward()
         print("fine forward")
         self.init_detection()
         time.sleep(3.0)
-        self.grid_search()
-        print("fine grid")
-        time.sleep(1)
-        self.position_commander.land()
+        lala = self.grid_search()
+        print("fine grid: DIREZIONE: ", lala)
+        self.cross(lala)
         self._x_off = self._x
         self._y_off = self._y
+        self.position_commander.land()
         self.position_commander.take_off()
         print("inizio back")
         self.backward()
@@ -116,7 +130,7 @@ class Drone:
  
 
 
-    def movement_cross(self, dir):
+    def movement_cross(self, dir, dist):
         if dir == 0:
             func = self.position_commander.forward
         elif dir == 1:
@@ -126,45 +140,66 @@ class Drone:
         elif dir == 3:
             func = self.position_commander.right
         
-        func(DPOS)
+        func(dist * DPOS)
         time.sleep(DTIME)
         
+    def point_to_map_cell(self, x, y):
+        idx_x = int(x / RES_POS) 
+        idx_y = int(y / RES_POS)
+
+        return idx_x, idx_y
+    
+    def map_cell_to_point(self, cell_x, cell_y):
+        return ((cell_x + 0.5)*RES_POS, (cell_y + 0.5)*RES_POS)
+
+
     def cross(self, direction):
         
-        points = []
+        self.map = np.zeros((int(MAX_X/RES_POS), int(MAX_Y/RES_POS)))
+        #self.points = []
+        self.cross_active = True
         print("CROSS - start")
 
-        # vado avanti di 45
-        for _ in range(45):
-            if self.detected:
-                points.append((self._x, self._y))
-            self.movement_cross(direction)
+        # avanti
+        self.movement_cross(direction, 55)
 
-        # torno indietro di 30
-        for _ in range(55):
-            if self.detected:
-                points.append((self._x, self._y))
-            self.movement_cross((direction + 2) % 4)
+        # indietro
+        self.movement_cross((direction + 2) % 4, 60)
 
-        # vado a sinistra di 30
-        for _ in range(45):
-            if self.detected:
-                points.append((self._x, self._y))
-            self.movement_cross((direction + 1) % 4)
+        # sinistra
+        self.movement_cross((direction + 1) % 4, 40)
 
-        # vado a destra di 60
-        for _ in range(45):
-            if self.detected:
-                points.append((self._x, self._y))
-            self.movement_cross((direction + 3) % 4)
+        # destra
+        self.movement_cross((direction + 3) % 4, 80)
 
-        mean_x = sum(p[0] for p in points)/len(points)
-        mean_y = sum(p[1] for p in points)/len(points)
-        print("points: ", points)
-        print("number of points: ", len(points))
+        self.cross_active = False
+
+        coordinates = np.argwhere(self.map == 1)
+
+        # Calculate the mean of the coordinates along each axis (rows and columns)
+        average_coordinates = np.mean(coordinates, axis=0)
+
+        mean_x, mean_y = self.map_cell_to_point(average_coordinates[0], average_coordinates[1])
+        
+        #sum(p[0] for p in self.points)/len(self.points)
+        #mean_y = average_coordinates[1] #sum(p[1] for p in self.points)/len(self.points)
+        
         print("center of the cross: ", mean_x, mean_y)
         print("actual position: ", self._x, self._y)
-        self.position_commander.move_distance(mean_x - self._x, mean_y - self._y, 0.0)
+
+        while(np.linalg.norm([mean_x - self._x, mean_y - self._y]) > 0.01):
+            print("aligning")
+            print("center of the cross: ", mean_x, mean_y)
+            print("actual position: ", self._x, self._y)
+
+            self.position_commander.move_distance(mean_x - self._x, mean_y - self._y, 0.0)
+            time.sleep(0.2)
+        print("FINAL - actual position: ", self._x, self._y)
+        plt.imshow(self.map, cmap='gray', origin='lower')
+        plt.savefig("map.png")
+        plt.close()
+
+        
         
         return
         
@@ -235,7 +270,7 @@ class Drone:
                         break
                     self.position_commander.back(dir * DPOS)
                     if self.detected:
-                        return True
+                        return BACK
                     time.sleep(DTIME)
                 
 
@@ -258,7 +293,7 @@ class Drone:
 
                     self.position_commander.back(dir * DPOS)
                     if(self.detected):
-                        return True
+                        return BACK
                     time.sleep(DTIME)
                 print("obstacle suprato")
                     # print("differenza dal centro", abs(self._y - (FIELD_SIZE_Y / 2)))
@@ -268,7 +303,7 @@ class Drone:
                 for _ in range(2):
                     self.position_commander.right(dir * DPOS)
                     if(self.detected):
-                        return True
+                        return RIGHT
                     time.sleep(DTIME)
             # Parte che va a dritto se non e' ostacolo e se sono al centro
             else:
@@ -277,20 +312,20 @@ class Drone:
                     print("correzione in lateral - going back")
                     self.position_commander.back(DPOS)
                     if(self.detected):
-                        return True
+                        return BACK
                 elif self._back < 0.1:
                     print("correzione in lateral - going forward")
                     self.position_commander.forward(DPOS)
                     if(self.detected):
-                        return True
+                        return FORWARD
 
                 myflag-=1
                 self.position_commander.right(dir_grid * DPOS)
                 if(self.detected):
-                        return True
+                        return RIGHT
                 time.sleep(DTIME)
         print("FORWARD - finished")
-        return False
+        return -1
 
     def grid_search(self): #to be rotated of 90 degrees
         print("GRID_SEARCH - start")
@@ -311,8 +346,9 @@ class Drone:
         i=0
         while True: # not self.detected:  
 
-            if self.lateral(setpoints[i], dir):
-                return
+            aa = self.lateral(setpoints[i], dir)
+            if aa != -1:
+                return aa
 
             print("GS: sono arrivato al bordo")
             
@@ -323,17 +359,19 @@ class Drone:
             while self._x < setpoints[i]: 
                 if self._front < FRONT_SENSOR_THRESHOLD:
                     self.position_commander.right(dir * DPOS)
+                    if(self.detected):
+                        return RIGHT
+
                 else:
                     self.position_commander.forward(DPOS)
-                if(self.detected):
-                    self.dir_lat = dir
-                    return
+                    if(self.detected):
+                        return FRONT
                 time.sleep(DTIME)
             
             while not (0.2 < self._y < FIELD_SIZE_Y-0.2):
                 self.position_commander.right(dir * DPOS)
                 if(self.detected):
-                            return True
+                    return RIGHT
                 time.sleep(DTIME)
             print("GS: ricomincio su nuovo setpoint: ", setpoints[i])
 
@@ -409,25 +447,30 @@ class Drone:
         dist = 5
         while True:
             for dir in range(4):
-                if self.movement_spiral(dir, dist):
-                    return
+                aa = self.movement_spiral(dir, dist)
+                if aa != -1:
+                    return aa
                 dist += 8
     
     def movement_spiral(self, dir, dist):
         if dir == 0:
             func = self.position_commander.forward
+            ee = FORWARD
         elif dir == 1:
             func = self.position_commander.left
+            ee = LEFT
         elif dir == 2:
             func = self.position_commander.back
+            ee = BACK
         elif dir == 3:
             func = self.position_commander.right
+            ee = RIGHT
         for _ in range(dist):
             func(DPOS)
             if self.detected:
-                return True
+                return ee
             time.sleep(DTIME)
-        return False
+        return -1
 
     def _connected(self, URI):
         print('We are now connected to {}'.format(URI))
