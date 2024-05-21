@@ -34,7 +34,6 @@ class Drone:
         self.home_position = home_position
         self._x_off = self.home_position[0]
         self._y_off = self.home_position[1]
-        self._z_off = self.home_position[2]
         self._scf = scf
 
         # Connection callback
@@ -52,10 +51,55 @@ class Drone:
 
         print("Init drone - finished")
 
+    def run(self):
+        print("Drone run - start")
+        self.position_commander = MotionCommander(self._scf, default_height=self.cruise_height)
+        self.position_commander.take_off(velocity=10.0)
+
+        # time.sleep(4.0)
+        # self.init_detection()
+        # time.sleep(4.0)
+
+        # while not self.detected:
+        #     self.position_commander.forward(DPOS)
+        #     time.sleep(DTIME)
+
+        # self.cross(0)
+        # self.position_commander.land()
+        # return
+
+
+        time.sleep(4.0)
+        print("before forward:", self._x, self._y)
+        time.sleep(0.1)
+        self.forward()
+        print("fine forward")
+        self.init_detection()
+        time.sleep(3.0)
+        lala = self.grid_search()
+        print("fine grid: DIREZIONE: ", lala)
+        self.cross(lala)
+        self._x_off = self._x
+        self._y_off = self._y
+        self.position_commander.land()
+        self.position_commander.take_off()
+        print("inizio back")
+        self.backward()
+        print("fine back")
+        self.init_detection()
+        time.sleep(3.0)
+        self.spiral()
+        time.sleep(1)
+        self.position_commander.land()
+
+        print("Drone run - finished")
+
+ 
+
 
     def landing_pad_detected(self):
         self.filtered_z = ALPHA * self.filtered_z + (1 - ALPHA) * self._z
-        undershoot = self.filtered_z < 0.278
+        undershoot = self.filtered_z < 0.265
         overshoot = self.filtered_z > 0.35
 
         if undershoot and (not self.old_undershoot) and not self.firstUndershootDetected:
@@ -85,51 +129,6 @@ class Drone:
         self.firstUndershootDetected = False
         self.filtered_z = self._z
 
-
-    def run(self):
-        print("Drone run - start")
-        self.position_commander = MotionCommander(self._scf, default_height=self.cruise_height)
-        self.position_commander.take_off(velocity=10.0)
-
-        # time.sleep(4.0)
-        # self.init_detection()
-        # time.sleep(4.0)
-
-        # while not self.detected:
-        #     self.position_commander.forward(DPOS)
-        #     time.sleep(DTIME)
-
-        # self.cross(0)
-        # self.position_commander.land()
-        # return
-
-
-        time.sleep(4.0)
-
-        self.forward()
-        print("fine forward")
-        self.init_detection()
-        time.sleep(3.0)
-        lala = self.grid_search()
-        print("fine grid: DIREZIONE: ", lala)
-        self.cross(lala)
-        self._x_off = self._x
-        self._y_off = self._y
-        self.position_commander.land()
-        self.position_commander.take_off()
-        print("inizio back")
-        self.backward()
-        print("fine back")
-        time.sleep(1)
-        self.spiral()
-        time.sleep(1)
-        self.position_commander.land()
-
-        print("Drone run - finished")
-
- 
-
-
     def movement_cross(self, dir, dist):
         if dir == 0:
             func = self.position_commander.forward
@@ -151,7 +150,6 @@ class Drone:
     
     def map_cell_to_point(self, cell_x, cell_y):
         return ((cell_x + 0.5)*RES_POS, (cell_y + 0.5)*RES_POS)
-
 
     def cross(self, direction):
         
@@ -202,8 +200,7 @@ class Drone:
         
         
         return
-        
-        
+            
     def forward(self):
         print("FORWARD - start")
         while self._x < LANDING_REGION_X:
@@ -324,7 +321,7 @@ class Drone:
                 if(self.detected):
                         return RIGHT
                 time.sleep(DTIME)
-        print("FORWARD - finished")
+        print("LATERAL - finished")
         return -1
 
     def grid_search(self): #to be rotated of 90 degrees
@@ -345,9 +342,10 @@ class Drone:
         print("GS: inizio con setpoint: ", setpoints[0])
         i=0
         while True: # not self.detected:  
-
+            print("starting lateral with dir: ", dir)
             aa = self.lateral(setpoints[i], dir)
             if aa != -1:
+                print("detected, fine grid search")
                 return aa
 
             print("GS: sono arrivato al bordo")
@@ -447,30 +445,26 @@ class Drone:
         dist = 5
         while True:
             for dir in range(4):
-                aa = self.movement_spiral(dir, dist)
-                if aa != -1:
-                    return aa
+                if self.movement_spiral(dir, dist):
+                    return dir
+
                 dist += 8
     
     def movement_spiral(self, dir, dist):
         if dir == 0:
             func = self.position_commander.forward
-            ee = FORWARD
         elif dir == 1:
             func = self.position_commander.left
-            ee = LEFT
         elif dir == 2:
             func = self.position_commander.back
-            ee = BACK
         elif dir == 3:
             func = self.position_commander.right
-            ee = RIGHT
         for _ in range(dist):
             func(DPOS)
             if self.detected:
-                return ee
+                return True
             time.sleep(DTIME)
-        return -1
+        return False
 
     def _connected(self, URI):
         print('We are now connected to {}'.format(URI))
@@ -532,7 +526,7 @@ class Drone:
     def pos_data(self, timestamp, data, logconf):
         self._x = data['stateEstimate.x'] + self._x_off
         self._y = data['stateEstimate.y'] + self._y_off
-        self._z = data['stateEstimate.z'] # + self._z_off
+        self._z = data['stateEstimate.z']
         self.landing_pad_detected()
         #print("x: ", self._x, " y: ", self._y, " z: ", self._z)
 
