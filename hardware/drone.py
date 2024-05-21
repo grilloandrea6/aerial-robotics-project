@@ -103,10 +103,11 @@ class Drone:
     def landing_pad_detected(self):
         self.filtered_z = ALPHA * self.filtered_z + (1 - ALPHA) * self._z
         undershoot = self.filtered_z < 0.278
-        overshoot = self.filtered_z > 0.357
+        overshoot = self.filtered_z > 0.347
 
         if undershoot and (not self.old_undershoot) and not self.firstUndershootDetected:
             self.detected = True
+            print("START DETECTING")
             self.firstUndershootDetected = True
         elif undershoot and (not self.old_undershoot) and self.firstUndershootDetected:
             self.firstUndershootDetected = False
@@ -115,6 +116,7 @@ class Drone:
             self.firstOvershootDetected = True
         elif overshoot and (not self.old_overshoot) and self.firstOvershootDetected:
             self.detected = False
+            print("STOP DETECTING")
             self.firstOvershootDetected = False
         
         self.old_overshoot = overshoot
@@ -173,7 +175,7 @@ class Drone:
 
 
         # indietro
-        self.movement_cross((direction + 2) % 4, 45)
+        self.movement_cross((direction + 2) % 4, 41.5)
 
         
         # destra
