@@ -74,22 +74,25 @@ class Drone:
         time.sleep(0.1)
         self.forward()
         print("fine forward")
+        time.sleep(2.0)
         self.init_detection()
-        time.sleep(3.0)
+        time.sleep(4.0)
         lala = self.grid_search()
         print("fine grid: DIREZIONE: ", lala)
         self.cross(lala)
         self._x_off = self._x
         self._y_off = self._y
         self.position_commander.land()
+        return
         self.position_commander.take_off()
         print("inizio back")
         self.backward()
         print("fine back")
-        self.init_detection()
-        time.sleep(3.0)
-        self.spiral()
-        time.sleep(1)
+        # self.init_detection()
+        # time.sleep(3.0)
+        # self.spiral()
+        # time.sleep(1)
+        
         self.position_commander.land()
 
         print("Drone run - finished")
@@ -99,8 +102,8 @@ class Drone:
 
     def landing_pad_detected(self):
         self.filtered_z = ALPHA * self.filtered_z + (1 - ALPHA) * self._z
-        undershoot = self.filtered_z < 0.265
-        overshoot = self.filtered_z > 0.35
+        undershoot = self.filtered_z < 0.278
+        overshoot = self.filtered_z > 0.357
 
         if undershoot and (not self.old_undershoot) and not self.firstUndershootDetected:
             self.detected = True
@@ -120,6 +123,10 @@ class Drone:
         if self.cross_active and self.detected:
             x, y = self.point_to_map_cell(self._x, self._y)
             self.map[x, y] = 1
+        elif self.cross_active:
+            x, y = self.point_to_map_cell(self._x, self._y)
+            self.map[x, y] = 0
+        
 
     def init_detection(self):
         self.detected = False
@@ -153,22 +160,25 @@ class Drone:
 
     def cross(self, direction):
         
-        self.map = np.zeros((int(MAX_X/RES_POS), int(MAX_Y/RES_POS)))
+        self.map = 0.5 * np.ones((int(MAX_X/RES_POS), int(MAX_Y/RES_POS)))
         #self.points = []
         self.cross_active = True
         print("CROSS - start")
 
         # avanti
-        self.movement_cross(direction, 55)
-
-        # indietro
-        self.movement_cross((direction + 2) % 4, 60)
+        self.movement_cross(direction, 45)
 
         # sinistra
-        self.movement_cross((direction + 1) % 4, 40)
+        self.movement_cross((direction + 1) % 4, 45)
 
+
+        # indietro
+        self.movement_cross((direction + 2) % 4, 45)
+
+        
         # destra
-        self.movement_cross((direction + 3) % 4, 80)
+        self.movement_cross((direction + 3) % 4, 95)
+
 
         self.cross_active = False
 
@@ -267,7 +277,7 @@ class Drone:
                         break
                     self.position_commander.back(dir * DPOS)
                     if self.detected:
-                        return BACK
+                        return BACK if dir == 1 else FORWARD
                     time.sleep(DTIME)
                 
 
@@ -290,7 +300,7 @@ class Drone:
 
                     self.position_commander.back(dir * DPOS)
                     if(self.detected):
-                        return BACK
+                        return BACK if dir == 1 else FORWARD
                     time.sleep(DTIME)
                 print("obstacle suprato")
                     # print("differenza dal centro", abs(self._y - (FIELD_SIZE_Y / 2)))
@@ -300,7 +310,7 @@ class Drone:
                 for _ in range(2):
                     self.position_commander.right(dir * DPOS)
                     if(self.detected):
-                        return RIGHT
+                        return RIGHT if dir == 1 else LEFT
                     time.sleep(DTIME)
             # Parte che va a dritto se non e' ostacolo e se sono al centro
             else:
@@ -319,7 +329,7 @@ class Drone:
                 myflag-=1
                 self.position_commander.right(dir_grid * DPOS)
                 if(self.detected):
-                        return RIGHT
+                        return RIGHT if dir_grid == 1 else LEFT
                 time.sleep(DTIME)
         print("LATERAL - finished")
         return -1
@@ -358,18 +368,18 @@ class Drone:
                 if self._front < FRONT_SENSOR_THRESHOLD:
                     self.position_commander.right(dir * DPOS)
                     if(self.detected):
-                        return RIGHT
+                        return RIGHT if dir > 0 else LEFT
 
                 else:
                     self.position_commander.forward(DPOS)
                     if(self.detected):
-                        return FRONT
+                        return FORWARD
                 time.sleep(DTIME)
             
             while not (0.2 < self._y < FIELD_SIZE_Y-0.2):
                 self.position_commander.right(dir * DPOS)
                 if(self.detected):
-                    return RIGHT
+                    return RIGHT if dir > 0 else LEFT
                 time.sleep(DTIME)
             print("GS: ricomincio su nuovo setpoint: ", setpoints[i])
 
