@@ -15,7 +15,7 @@ if __name__ == '__main__':
     cflib.crtp.init_drivers()
 
     # Define the home position (X,Y) of take off pad
-    home = np.array([2.8,1.35])
+    home = np.array([0.25,1.18])
 
 
     # Run control

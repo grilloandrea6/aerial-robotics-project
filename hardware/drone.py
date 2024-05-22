@@ -56,43 +56,40 @@ class Drone:
         self.position_commander = MotionCommander(self._scf, default_height=self.cruise_height)
         self.position_commander.take_off(velocity=10.0)
 
-        # time.sleep(4.0)
-        # self.init_detection()
-        # time.sleep(4.0)
+        time.sleep(2.0)
+        
 
-        # while not self.detected:
-        #     self.position_commander.forward(DPOS)
-        #     time.sleep(DTIME)
-
-        # self.cross(0)
-        # self.position_commander.land()
-        # return
-
-
-        time.sleep(4.0)
         print("before forward:", self._x, self._y)
         time.sleep(0.1)
         self.forward()
+    
         print("fine forward")
         time.sleep(2.0)
         self.init_detection()
         time.sleep(4.0)
-        lala = self.grid_search()
-        print("fine grid: DIREZIONE: ", lala)
-        self.cross(lala)
+
+        direction = self.grid_search()
+        print("fine grid: DIREZIONE: ", direction)
+        self.cross(direction)
         self._x_off = self._x
         self._y_off = self._y
+
+        #self.position_commander.down(self.cruise_height/2)
         self.position_commander.land()
-        return
-        self.position_commander.take_off()
-        print("inizio back")
-        self.backward()
-        print("fine back")
-        # self.init_detection()
-        # time.sleep(3.0)
-        # self.spiral()
-        # time.sleep(1)
+        time.sleep(1.0)
+        self.position_commander.take_off(velocity=10.0)
         
+        print("inizio back")
+        direction = self.backward()
+        print("fine back: DIREZIONE: ", direction)
+        time.sleep(1.0)
+        if direction == -1:
+            direction = self.spiral()
+            print("fine spiral: DIREZIONE: ", direction)
+
+        self.cross(direction)
+
+        #self.position_commander.down(self.cruise_height/2)
         self.position_commander.land()
 
         print("Drone run - finished")
@@ -389,12 +386,20 @@ class Drone:
         print("BACKWARD - start")
         lat_obstacle = False
         myflag = 0
+        detecting = False
         while self._x > self.home_position[0] or abs(self._y - self.home_position[1]) > 0.05:
+            if self._x - self.home_position[0] < 1.0:
+                self.init_detection()
+                time.sleep(2.0)
+                detecting = True
+
             # parte che resetta la modalita' di NON ostacolo
             sens = self._right if self._right < self._left else self._left
             if sens > LATERAL_SENSOR_THRESHOLD:
                 for _ in range(3):
                     self.position_commander.back(DPOS)
+                    if self.detected and detecting:
+                        return BACK
                     time.sleep(DTIME)
                 lat_obstacle = False
 
@@ -411,6 +416,8 @@ class Drone:
                         lat_obstacle = True
                         break
                     self.position_commander.right(dir * DPOS)
+                    if self.detected and detecting:
+                        return RIGHT if dir == 1 else LEFT
                     time.sleep(DTIME)
                 
 
@@ -429,6 +436,8 @@ class Drone:
                         print("Going right" if dir > 0 else "Going left")
                         
                     self.position_commander.right(dir * DPOS)
+                    if self.detected and detecting:
+                        return RIGHT if dir == 1 else LEFT
                     time.sleep(DTIME)
                     # print("differenza dal centro", abs(self._y - self.home_position[1]))
                 myflag=70
@@ -436,6 +445,8 @@ class Drone:
                 print("Obstacle in front not detected anymore, moving a little bit more")
                 for _ in range(2):
                     self.position_commander.right(dir * DPOS)
+                    if self.detected and detecting:
+                        return RIGHT if dir == 1 else LEFT
                     time.sleep(DTIME)
             # Parte che va a dritto se non e' ostacolo e se sono al centro
             else:
@@ -445,13 +456,20 @@ class Drone:
                 if self._left < 0.1:
                     print("correzione in forward - going right")
                     self.position_commander.right(DPOS)
+                    if self.detected and detecting:
+                        return RIGHT
                 elif self._right < 0.1:
                     print("correzione in forward - going left")
                     self.position_commander.left(DPOS)
+                    if self.detected and detecting:
+                        return LEFT
 
                 self.position_commander.back(DPOS)
+                if self.detected and detecting:
+                    return BACK
                 time.sleep(DTIME)
         print("BACKWARD - finished")
+        return -1
     
     def spiral(self):
         dist = 5
