@@ -8,13 +8,15 @@ from drone import Drone
 import numpy as np
 
 if __name__ == '__main__':    
-    uri = uri_helper.uri_from_env(default='radio://0/37/2M/E7E7E70101')
+
+    uri_ = 'radio://0/37/2M/E7E7E70101'
+
+    uri = uri_helper.uri_from_env(default=uri_)
     cflib.crtp.init_drivers()
 
     # Define the home position (X,Y) of take off pad
-    home = np.array([3.05,.75, 0.3])
+    home = np.array([0.25,1.18])
 
-    uri = 'radio://0/37/2M/E7E7E70101'
 
     # Run control
     cf = Crazyflie(rw_cache=".cache")

@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 from cflib.crazyflie.log import LogConfig
 # from cflib.positioning.position_hl_commander import PositionHlCommander
 from cflib.positioning.motion_commander import MotionCommander
@@ -12,8 +13,20 @@ LATERAL_SENSOR_THRESHOLD = 0.17
 FRONT_SENSOR_THRESHOLD = 0.325
 FIELD_THRESHOLD = 0.2
 
+
+MAX_X     = 5.0 # meter
+MAX_Y     = 3.0 # meter
+RES_POS   = 0.01 # meter
+
 FIELD_SIZE_Y = 3.0
 GRID_FORWARD_STEP = 0.25
+
+ALPHA = 0.05
+
+FORWARD = 0
+LEFT = 1
+BACK = 2
+RIGHT = 3
 
 class Drone:
     def __init__(self, scf, home_position):
@@ -21,7 +34,6 @@ class Drone:
         self.home_position = home_position
         self._x_off = self.home_position[0]
         self._y_off = self.home_position[1]
-        self._z_off = self.home_position[2]
         self._scf = scf
 
         # Connection callback
@@ -30,98 +42,174 @@ class Drone:
         self._scf.cf.connection_failed.add_callback(self._connection_failed)
         self._scf.cf.connection_lost.add_callback(self._connection_lost)
 
+        self.cruise_height = 0.30
+
+        self._z = 0
+        self.cross_active = False
+        self.init_detection()
         self._init_logging()
 
         print("Init drone - finished")
 
     def run(self):
         print("Drone run - start")
-        with MotionCommander(self._scf, default_height=0.3) as self.position_commander:
-            # Take off and wait a second
-            time.sleep(1.0)
-            
-            # self.spiral()
-            # time.sleep(1.0)
-            # return
+        self.position_commander = MotionCommander(self._scf, default_height=self.cruise_height)
+        self.position_commander.take_off(velocity=10.0)
 
-            self.forward()
-            time.sleep(1.0)
-            self.grid_search()
-            
-            time.sleep(1)
-            self.cross()
-            
-            return
-            self.position_commander.land()
-            self._x_off = self._x
-            self._y_off = self._y
-            time.sleep(1.0)
-            self.position_commander.take_off()
-            time.sleep(1.0)
-            self.backward()
-            print("Final coordinates: ", self._x, self._y)
-            self.position_commander.__exit__(None, None, None)
-
-
-            print("Drone run - finished")
-
-
-    def cross(self):
-        print("CROSS - start")
-        center = [0,0]
-        point_0 = [self._x, self._y]
-        print("CR: p0: ", point_0)
-        self.dir_long = 1 # 1 = forward, -1 = backward 
-        flag = False
-        while (not flag) and abs(self._x - point_0[0]) < 0.30 :
-            flag = self.landing_pad_detected()
-            self.position_commander.forward(self.dir_long * DPOS)
-        print('CR: first point: ', flag, ' at ', self._x)
-        pointA = self._x
-        
-        self.dir_long = - self.dir_long
-        self.position_commander.forward(self.dir_long * DPOS)
         time.sleep(2.0)
-        flag = False
-        while (not flag) and abs(self._x - pointA) < 0.30 :
-            flag = self.landing_pad_detected()
-            self.position_commander.forward(self.dir_long * DPOS)
-        print('CR: second point: ', flag, ' at ', self._x)
-        pointB = self._x
-        center[0] = (pointA - pointB ) / 2
+        
 
-        # Go to center point on x coordinate
-        self.dir_long = - self.dir_long
-        while abs(self._x - center[0]) < 0.05:
-            self.position_commander.forward(self.dir_long*DPOS)
+        print("before forward:", self._x, self._y)
+        time.sleep(0.1)
+        self.forward()
+    
+        print("fine forward")
+        time.sleep(2.0)
+        self.init_detection()
+        time.sleep(4.0)
 
-        print("CS - center reached")
+        direction = self.grid_search()
+        print("fine grid: DIREZIONE: ", direction)
+        self.cross(direction)
+        self._x_off = self._x
+        self._y_off = self._y
+
+        #self.position_commander.down(self.cruise_height/2)
+        self.position_commander.land()
+        time.sleep(1.0)
+        self.position_commander.take_off(velocity=10.0)
+        
+        print("inizio back")
+        direction = self.backward()
+        print("fine back: DIREZIONE: ", direction)
+        time.sleep(1.0)
+        if direction == -1:
+            direction = self.spiral()
+            print("fine spiral: DIREZIONE: ", direction)
+
+        self.cross(direction)
+
+        #self.position_commander.down(self.cruise_height/2)
+        self.position_commander.land()
+
+        print("Drone run - finished")
+
+ 
+
+
+    def landing_pad_detected(self):
+        self.filtered_z = ALPHA * self.filtered_z + (1 - ALPHA) * self._z
+        undershoot = self.filtered_z < 0.278
+        overshoot = self.filtered_z > 0.347
+
+        if undershoot and (not self.old_undershoot) and not self.firstUndershootDetected:
+            self.detected = True
+            print("START DETECTING")
+            self.firstUndershootDetected = True
+        elif undershoot and (not self.old_undershoot) and self.firstUndershootDetected:
+            self.firstUndershootDetected = False
+
+        if overshoot and (not self.old_overshoot) and not self.firstOvershootDetected:
+            self.firstOvershootDetected = True
+        elif overshoot and (not self.old_overshoot) and self.firstOvershootDetected:
+            self.detected = False
+            print("STOP DETECTING")
+            self.firstOvershootDetected = False
+        
+        self.old_overshoot = overshoot
+        self.old_undershoot = undershoot  
+
+        if self.cross_active and self.detected:
+            x, y = self.point_to_map_cell(self._x, self._y)
+            self.map[x, y] = 1
+        elif self.cross_active:
+            x, y = self.point_to_map_cell(self._x, self._y)
+            self.map[x, y] = 0
+        
+
+    def init_detection(self):
+        self.detected = False
+        self.old_overshoot = False
+        self.old_undershoot = False
+        self.firstOvershootDetected = False
+        self.firstUndershootDetected = False
+        self.filtered_z = self._z
+
+    def movement_cross(self, dir, dist):
+        if dir == 0:
+            func = self.position_commander.forward
+        elif dir == 1:
+            func = self.position_commander.left
+        elif dir == 2:
+            func = self.position_commander.back
+        elif dir == 3:
+            func = self.position_commander.right
+        
+        func(dist * DPOS)
+        time.sleep(DTIME)
+        
+    def point_to_map_cell(self, x, y):
+        idx_x = int(x / RES_POS) 
+        idx_y = int(y / RES_POS)
+
+        return idx_x, idx_y
+    
+    def map_cell_to_point(self, cell_x, cell_y):
+        return ((cell_x + 0.5)*RES_POS, (cell_y + 0.5)*RES_POS)
+
+    def cross(self, direction):
+        
+        self.map = 0.5 * np.ones((int(MAX_X/RES_POS), int(MAX_Y/RES_POS)))
+        #self.points = []
+        self.cross_active = True
+        print("CROSS - start")
+
+        # avanti
+        self.movement_cross(direction, 45)
+
+        # sinistra
+        self.movement_cross((direction + 1) % 4, 45)
+
+
+        # indietro
+        self.movement_cross((direction + 2) % 4, 41.5)
+
+        
+        # destra
+        self.movement_cross((direction + 3) % 4, 95)
+
+
+        self.cross_active = False
+
+        coordinates = np.argwhere(self.map == 1)
+
+        # Calculate the mean of the coordinates along each axis (rows and columns)
+        average_coordinates = np.mean(coordinates, axis=0)
+
+        mean_x, mean_y = self.map_cell_to_point(average_coordinates[0], average_coordinates[1])
+        
+        #sum(p[0] for p in self.points)/len(self.points)
+        #mean_y = average_coordinates[1] #sum(p[1] for p in self.points)/len(self.points)
+        
+        print("center of the cross: ", mean_x, mean_y)
+        print("actual position: ", self._x, self._y)
+
+        while(np.linalg.norm([mean_x - self._x, mean_y - self._y]) > 0.01):
+            print("aligning")
+            print("center of the cross: ", mean_x, mean_y)
+            print("actual position: ", self._x, self._y)
+
+            self.position_commander.move_distance(mean_x - self._x, mean_y - self._y, 0.0)
+            time.sleep(0.2)
+        print("FINAL - actual position: ", self._x, self._y)
+        plt.imshow(self.map, cmap='gray', origin='lower')
+        plt.savefig("map.png")
+        plt.close()
+
+        
+        
         return
-        self.dir_lat = 1 # 1 = right, -1 = left
-        while self.landing_pad_detected() == False or abs(self._y - point_0[1]) < 0.30 :
-            self.position_commander.right(self.dir_lat * DPOS)
-        pointC = self._y
-        self.dir_lat = -1 # 1 = right, -1 = left
-        while self.landing_pad_detected() == False or abs(self._y - pointC) < 0.30 :
-            self.position_commander.right(self.dir_lat * DPOS)
-        pointD = self._y
-
-        center[1] = pointD
-
-        #Go to center
-        self.dir_lat = -self.dir_lat # 1 = right, -1 = left
-        while abs(self._x - center[1]):
-            self.position_commander.right(self.dir_lat * DPOS)
-
-
-
-        #continue lateral/forward until you detect the end of the landing pad (change in zrange)
-        while self.landing_pad_detected() == False:
-            self.position_commander.right(DPOS)
-            time.sleep(DTIME)
-
-        print("CROSS - finished")    
-
+            
     def forward(self):
         print("FORWARD - start")
         while self._x < LANDING_REGION_X:
@@ -142,7 +230,7 @@ class Drone:
                     time.sleep(DTIME)
                 
                 print("Obstacle in front not detected anymore, moving a little bit more")
-                for _ in range(2):
+                for _ in range(3):
                     self.position_commander.right(dir * DPOS)
                     time.sleep(DTIME)
 
@@ -187,8 +275,8 @@ class Drone:
                         lat_obstacle = True
                         break
                     self.position_commander.back(dir * DPOS)
-                    if self.landing_pad_detected():
-                        return True
+                    if self.detected:
+                        return BACK if dir == 1 else FORWARD
                     time.sleep(DTIME)
                 
 
@@ -210,8 +298,8 @@ class Drone:
                         print("Going back" if dir > 0 else "Going front")
 
                     self.position_commander.back(dir * DPOS)
-                    if(self.landing_pad_detected()):
-                        return True
+                    if(self.detected):
+                        return BACK if dir == 1 else FORWARD
                     time.sleep(DTIME)
                 print("obstacle suprato")
                     # print("differenza dal centro", abs(self._y - (FIELD_SIZE_Y / 2)))
@@ -220,8 +308,8 @@ class Drone:
                 print("Obstacle in front not detected anymore, moving a little bit more")
                 for _ in range(2):
                     self.position_commander.right(dir * DPOS)
-                    if(self.landing_pad_detected()):
-                        return True
+                    if(self.detected):
+                        return RIGHT if dir == 1 else LEFT
                     time.sleep(DTIME)
             # Parte che va a dritto se non e' ostacolo e se sono al centro
             else:
@@ -229,21 +317,21 @@ class Drone:
                 if self._front < 0.1:
                     print("correzione in lateral - going back")
                     self.position_commander.back(DPOS)
-                    if(self.landing_pad_detected()):
-                        return True
+                    if(self.detected):
+                        return BACK
                 elif self._back < 0.1:
                     print("correzione in lateral - going forward")
                     self.position_commander.forward(DPOS)
-                    if(self.landing_pad_detected()):
-                        return True
+                    if(self.detected):
+                        return FORWARD
 
                 myflag-=1
                 self.position_commander.right(dir_grid * DPOS)
-                if(self.landing_pad_detected()):
-                        return True
+                if(self.detected):
+                        return RIGHT if dir_grid == 1 else LEFT
                 time.sleep(DTIME)
-        print("FORWARD - finished")
-        return False
+        print("LATERAL - finished")
+        return -1
 
     def grid_search(self): #to be rotated of 90 degrees
         print("GRID_SEARCH - start")
@@ -254,18 +342,20 @@ class Drone:
         
         #Finchè non detecto il landing pad [ TODO o finche non sono alla fine della landing region --> use backward]
         s = LANDING_REGION_X+0.1
-        step = 0.25
+        step = 0.3 #0.25
         setpoints = [s]
-        for i in range(6):
+        for i in range(10):
             setpoints.append(s + i*step)
         print("GS - setpoints: ", setpoints)
 
         print("GS: inizio con setpoint: ", setpoints[0])
         i=0
         while True: # not self.detected:  
-
-            if self.lateral(setpoints[i], dir):
-                return
+            print("starting lateral with dir: ", dir)
+            aa = self.lateral(setpoints[i], dir)
+            if aa != -1:
+                print("detected, fine grid search")
+                return aa
 
             print("GS: sono arrivato al bordo")
             
@@ -276,17 +366,19 @@ class Drone:
             while self._x < setpoints[i]: 
                 if self._front < FRONT_SENSOR_THRESHOLD:
                     self.position_commander.right(dir * DPOS)
+                    if(self.detected):
+                        return RIGHT if dir > 0 else LEFT
+
                 else:
                     self.position_commander.forward(DPOS)
-                if(self.landing_pad_detected()):
-                    self.dir_lat = dir
-                    return
+                    if(self.detected):
+                        return FORWARD
                 time.sleep(DTIME)
             
             while not (0.2 < self._y < FIELD_SIZE_Y-0.2):
                 self.position_commander.right(dir * DPOS)
-                if(self.landing_pad_detected()):
-                            return True
+                if(self.detected):
+                    return RIGHT if dir > 0 else LEFT
                 time.sleep(DTIME)
             print("GS: ricomincio su nuovo setpoint: ", setpoints[i])
 
@@ -294,12 +386,20 @@ class Drone:
         print("BACKWARD - start")
         lat_obstacle = False
         myflag = 0
+        detecting = False
         while self._x > self.home_position[0] or abs(self._y - self.home_position[1]) > 0.05:
+            if self._x - self.home_position[0] < 1.0:
+                self.init_detection()
+                time.sleep(2.0)
+                detecting = True
+
             # parte che resetta la modalita' di NON ostacolo
             sens = self._right if self._right < self._left else self._left
             if sens > LATERAL_SENSOR_THRESHOLD:
                 for _ in range(3):
                     self.position_commander.back(DPOS)
+                    if self.detected and detecting:
+                        return BACK
                     time.sleep(DTIME)
                 lat_obstacle = False
 
@@ -309,13 +409,15 @@ class Drone:
                 dir = np.sign(self._y - self.home_position[1])
                 while np.abs(self._y - self.home_position[1]) > 0.1:
                     #print("differenza dal centro", abs(self._y - self.home_position[1]))
-                    print("y", self._y)
+                    #print("y", self._y)
                     sens = self._right if dir > 0 else self._left
                     if sens < LATERAL_SENSOR_THRESHOLD:
                         print("Detected lateral obstacle, just go forward")
                         lat_obstacle = True
                         break
                     self.position_commander.right(dir * DPOS)
+                    if self.detected and detecting:
+                        return RIGHT if dir == 1 else LEFT
                     time.sleep(DTIME)
                 
 
@@ -334,6 +436,8 @@ class Drone:
                         print("Going right" if dir > 0 else "Going left")
                         
                     self.position_commander.right(dir * DPOS)
+                    if self.detected and detecting:
+                        return RIGHT if dir == 1 else LEFT
                     time.sleep(DTIME)
                     # print("differenza dal centro", abs(self._y - self.home_position[1]))
                 myflag=70
@@ -341,6 +445,8 @@ class Drone:
                 print("Obstacle in front not detected anymore, moving a little bit more")
                 for _ in range(2):
                     self.position_commander.right(dir * DPOS)
+                    if self.detected and detecting:
+                        return RIGHT if dir == 1 else LEFT
                     time.sleep(DTIME)
             # Parte che va a dritto se non e' ostacolo e se sono al centro
             else:
@@ -350,23 +456,31 @@ class Drone:
                 if self._left < 0.1:
                     print("correzione in forward - going right")
                     self.position_commander.right(DPOS)
+                    if self.detected and detecting:
+                        return RIGHT
                 elif self._right < 0.1:
                     print("correzione in forward - going left")
                     self.position_commander.left(DPOS)
+                    if self.detected and detecting:
+                        return LEFT
 
                 self.position_commander.back(DPOS)
+                if self.detected and detecting:
+                    return BACK
                 time.sleep(DTIME)
         print("BACKWARD - finished")
+        return -1
     
     def spiral(self):
         dist = 5
         while True:
             for dir in range(4):
-                if self.movement(dir, dist):
-                    return
+                if self.movement_spiral(dir, dist):
+                    return dir
+
                 dist += 8
     
-    def movement(self, dir, dist):
+    def movement_spiral(self, dir, dist):
         if dir == 0:
             func = self.position_commander.forward
         elif dir == 1:
@@ -377,14 +491,10 @@ class Drone:
             func = self.position_commander.right
         for _ in range(dist):
             func(DPOS)
-            if self.landing_pad_detected():
+            if self.detected:
                 return True
             time.sleep(DTIME)
         return False
-
-    def landing_pad_detected(self):
-        detected = ((abs(self._z - .3) > 0.08)) #ToDo
-        return detected
 
     def _connected(self, URI):
         print('We are now connected to {}'.format(URI))
@@ -446,7 +556,8 @@ class Drone:
     def pos_data(self, timestamp, data, logconf):
         self._x = data['stateEstimate.x'] + self._x_off
         self._y = data['stateEstimate.y'] + self._y_off
-        self._z = data['stateEstimate.z'] + self._z_off
+        self._z = data['stateEstimate.z']
+        self.landing_pad_detected()
         #print("x: ", self._x, " y: ", self._y, " z: ", self._z)
 
     def _log_error(self, logconf, msg):
