@@ -8,7 +8,7 @@ import sys
 
 DPOS = 0.01
 DTIME = 0
-LANDING_REGION_X = 3.5 # TODO
+LANDING_REGION_X = 3.6 # TODO
 LATERAL_SENSOR_THRESHOLD = 0.17
 FRONT_SENSOR_THRESHOLD = 0.325
 FIELD_THRESHOLD = 0.2
@@ -99,7 +99,7 @@ class Drone:
 
     def landing_pad_detected(self):
         self.filtered_z = ALPHA * self.filtered_z + (1 - ALPHA) * self._z
-        undershoot = self.filtered_z < 0.278
+        undershoot = self.filtered_z < 0.27
         overshoot = self.filtered_z > 0.347
 
         if undershoot and (not self.old_undershoot) and not self.firstUndershootDetected:
