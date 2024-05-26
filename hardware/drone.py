@@ -1,27 +1,23 @@
 import matplotlib.pyplot as plt
 from cflib.crazyflie.log import LogConfig
-# from cflib.positioning.position_hl_commander import PositionHlCommander
 from cflib.positioning.motion_commander import MotionCommander
 import time
 import numpy as np
-import sys
 
-DPOS = 0.01
-DTIME = 0
-LANDING_REGION_X = 3.6 # TODO
-LATERAL_SENSOR_THRESHOLD = 0.17
-FRONT_SENSOR_THRESHOLD = 0.325
-FIELD_THRESHOLD = 0.2
+DPOS = 0.01                         # meters
+LANDING_REGION_X = 3.6              # meters
+LATERAL_SENSOR_THRESHOLD = 0.17     # meters
+FRONT_SENSOR_THRESHOLD = 0.325      # meters
 
 
-MAX_X     = 5.0 # meter
-MAX_Y     = 3.0 # meter
-RES_POS   = 0.01 # meter
+MAX_X     = 5.0                     # meters
+MAX_Y     = 3.0                     # meters
+RES_POS   = 0.01                    # meters
 
-FIELD_SIZE_Y = 3.0
-GRID_FORWARD_STEP = 0.25
+FIELD_SIZE_Y = MAX_Y                # meters
+GRID_FORWARD_STEP = 0.3             # meters
 
-ALPHA = 0.05
+ALPHA = 0.05                        # EMA filter parameter
 
 FORWARD = 0
 LEFT = 1
@@ -60,44 +56,46 @@ class Drone:
         self.position_commander.take_off(velocity=10.0)
 
         time.sleep(1.0)
-        print("before forward:", self._x, self._y)
+        print("Position before forward:", self._x, self._y)
         self.forward()
     
-        print("fine forward")
+        print("Forward ended")
         time.sleep(.5)
         self.init_detection()
         time.sleep(2.0)
 
         direction = self.grid_search()
-        print("fine grid: DIREZIONE: ", direction)
+        print("End grid: Direction: ", direction)
         self.cross(direction)
-        print("position before landing: ", self._x, self._y)
+        print("Position before landing: ", self._x, self._y)
         self._x_off = self._x
         self._y_off = self._y
-        #self.home_position[0] = self.home_position[0] + 2.4
 
+        # Do land in two steps to minimize drift
         self.position_commander.down(self.cruise_height/2)
         self.position_commander.land()
         time.sleep(1.0)
+
+        # Take off
         self.position_commander.take_off(velocity=10.0)
         time.sleep(2.0)
-        print("position after landing: ", self._x, self._y)
-        print("inizio back")
+        print("Position after taking off: ", self._x, self._y)
         direction = self.backward()
-        print("fine back: DIREZIONE: ", direction)
+        print("End back: Direction: ", direction)
         time.sleep(1.0)
+
         if direction == -1:
+            print("Position before spiral: ", self._x, self._y)
             direction = self.spiral()
-            print("position before spiral: ", self._x, self._y)
-            print("fine spiral: DIREZIONE: ", direction)
-        print("position before cross: ", self._x, self._y)
+            print("End spiral: Direction: ", direction)
+        print("Position before cross: ", self._x, self._y)
         self.cross(direction)
 
+        # Do land in two steps to minimize drift
         self.position_commander.down(self.cruise_height/2)
         self.position_commander.land()
 
         print("Drone run - finished")
-
 
     def landing_pad_detected(self):
         self.filtered_z = ALPHA * self.filtered_z + (1 - ALPHA) * self._z
@@ -129,22 +127,21 @@ class Drone:
             self.map[x, y] = 0
 
 
-        # # if self.cross_active and self.image_index % 80 == 0:
-        # #     plt.imshow(np.flip(self.map, 1), cmap='viridis', origin='lower')
-        # #     plt.savefig("./cross_map/file%05d.png" % (self.image_index/10))
-        # #     plt.close()
+        if self.cross_active and self.image_index % 80 == 0:
+            plt.imshow(np.flip(self.map, 1), cmap='viridis', origin='lower')
+            plt.savefig("./cross_map/file%05d.png" % (self.image_index/10))
+            plt.close()
 
 
-        # x, y = self.point_to_map_cell(self._x, self._y)
-        # self.print_map[x, y] = 1
-        # if self.image_index % 100 == 0:
-        #     plt.imshow(np.flip(self.print_map, 1), cmap='viridis', origin='lower')
-        #     plt.savefig("./images/file%05d.png" % (self.image_index/10))
-        #     plt.close()
+        x, y = self.point_to_map_cell(self._x, self._y)
+        self.print_map[x, y] = 1
+        if self.image_index % 100 == 0:
+            plt.imshow(np.flip(self.print_map, 1), cmap='viridis', origin='lower')
+            plt.savefig("./images/file%05d.png" % (self.image_index/10))
+            plt.close()
 
-        # self.image_index += 1
+        self.image_index += 1
         
-
     def init_detection(self):
         self.detected = False
         self.old_overshoot = False
@@ -154,51 +151,42 @@ class Drone:
         self.filtered_z = self._z
 
     def movement_cross(self, dir, dist):
-        if dir == 0:
+        if dir == FORWARD:
             func = self.position_commander.forward
-        elif dir == 1:
+        elif dir == LEFT:
             func = self.position_commander.left
-        elif dir == 2:
+        elif dir == BACK:
             func = self.position_commander.back
-        elif dir == 3:
+        elif dir == RIGHT:
             func = self.position_commander.right
         
         func(dist * DPOS)
-        time.sleep(DTIME)
         
     def point_to_map_cell(self, x, y):
-        # idx_x = int((x + 1.0) / RES_POS) 
-        # idx_y = int((y + 1.0) / RES_POS)
         idx_x = int(x / RES_POS) 
         idx_y = int(y / RES_POS)
 
         return idx_x, idx_y
     
     def map_cell_to_point(self, cell_x, cell_y):
-        #return ((cell_x + 0.5)*RES_POS - 1.0, (cell_y + 0.5)*RES_POS - 1.0)
         return ((cell_x + 0.5)*RES_POS, (cell_y + 0.5)*RES_POS)
 
     def cross(self, direction):
-        
         self.map = 0.5 * np.ones((int(MAX_X/RES_POS), int(MAX_Y/RES_POS)))
-        #self.points = []
         self.cross_active = True
         print("CROSS - start")
 
-        # avanti
+        # forward
         self.movement_cross(direction, 45)
 
-        # sinistra
+        # left
         self.movement_cross((direction + 1) % 4, 45)
 
-
-        # indietro
+        # back
         self.movement_cross((direction + 2) % 4, 41.5)
-
         
-        # destra
+        # right
         self.movement_cross((direction + 3) % 4, 95)
-
 
         self.cross_active = False
 
@@ -208,9 +196,6 @@ class Drone:
         average_coordinates = np.mean(coordinates, axis=0)
 
         mean_x, mean_y = self.map_cell_to_point(average_coordinates[0], average_coordinates[1])
-        
-        #sum(p[0] for p in self.points)/len(self.points)
-        #mean_y = average_coordinates[1] #sum(p[1] for p in self.points)/len(self.points)
         
         print("center of the cross: ", mean_x, mean_y)
         print("actual position: ", self._x, self._y)
@@ -243,48 +228,39 @@ class Drone:
                         print("Going right" if dir > 0 else "Going left")
                         
                     self.position_commander.right(dir * DPOS)
-                    time.sleep(DTIME)
                 
                 print("Obstacle in front not detected anymore, moving a little bit more")
                 for _ in range(10):
                     self.position_commander.right(dir * DPOS)
-                    time.sleep(DTIME)
 
             else:
                 if self._left < 0.1:
-                    print("correzione in forward - going right")
+                    print("Correction in forward - going right")
                     self.position_commander.right(DPOS)
                 elif self._right < 0.1:
-                    print("correzione in forward - going left")
+                    print("Correction in forward - going left")
                     self.position_commander.left(DPOS)
 
                 self.position_commander.forward(DPOS)
-                time.sleep(DTIME)
         print("FORWARD - finished")
 
     def lateral(self, setpoint, dir_grid):
-        '''
-        Inputs: setpoint is la direzione del vettore da seguire
-                dir_grid is il verso del vettore da seguire: 1 se right, -1 se left
-        '''
         print("LATERAL - start")
 
         myflag = 0
         lat_obstacle = False
         while 0.2 < self._y < FIELD_SIZE_Y-0.2:
             
-            # parte che resetta la modalita' di NON ostacolo
+            # No-obstacle mode resetting
             sens = self._back if self._back < self._front else self._front
             if sens > LATERAL_SENSOR_THRESHOLD:
                 lat_obstacle = False
 
-            # Parte che va al centro se non sono al centro
+            # Go towards center
             if abs(self._x - setpoint) > 0.1 and not lat_obstacle and myflag<=0:
-                print("Moving towards the setpoint along which direction?")
-                dir = np.sign(self._x - setpoint) # 1 se sono avanti al setpoint --> voglio andare indietro
+                print("Moving towards the setpoint")
+                dir = np.sign(self._x - setpoint) 
                 while np.abs(self._x - setpoint) > 0.1:
-                    #print("differenza dal setpoint", abs(self._x - setpoint))
-                    #print("x", self._x)
                     sens = self._back if dir > 0 else self._front
                     if sens < LATERAL_SENSOR_THRESHOLD:
                         print("Detected front/back obstacle, just go (lateral)")
@@ -293,14 +269,12 @@ class Drone:
                     self.position_commander.back(dir * DPOS)
                     if self.detected:
                         return BACK if dir == 1 else FORWARD
-                    time.sleep(DTIME)
                 
 
             sens = self._right if dir_grid == 1 else self._left
-            # Parte per obstacle avoidance
+            # Obstacle avoidance
             if sens < FRONT_SENSOR_THRESHOLD:
                 print("Obstacle detected in front (lateral)")
-                # print("Going back" if dir > 0 else "Going front")
                 dir = np.sign(self._x - setpoint)
                 if dir == 0:
                     dir = 1
@@ -316,9 +290,6 @@ class Drone:
                     self.position_commander.back(dir * DPOS)
                     if(self.detected):
                         return BACK if dir == 1 else FORWARD
-                    time.sleep(DTIME)
-                print("obstacle suprato")
-                    # print("differenza dal centro", abs(self._y - (FIELD_SIZE_Y / 2)))
                 myflag=70
                 
                 print("Obstacle in front not detected anymore, moving a little bit more")
@@ -326,10 +297,7 @@ class Drone:
                     self.position_commander.right(dir * DPOS)
                     if(self.detected):
                         return RIGHT if dir == 1 else LEFT
-                    time.sleep(DTIME)
-            # Parte che va a dritto se non e' ostacolo e se sono al centro
             else:
-                # print("differenza dal centro", abs(self._y - (FIELD_SIZE_Y / 2)))
                 if self._front < 0.1:
                     print("correzione in lateral - going back")
                     self.position_commander.back(DPOS)
@@ -345,20 +313,17 @@ class Drone:
                 self.position_commander.right(dir_grid * DPOS)
                 if(self.detected):
                         return RIGHT if dir_grid == 1 else LEFT
-                time.sleep(DTIME)
         print("LATERAL - finished")
         return -1
 
-    def grid_search(self): #to be rotated of 90 degrees
+    def grid_search(self):
         print("GRID_SEARCH - start")
-        lat_obstacle = False
-        myflag = 0
 
+        # start to the right
         dir = 1
-        
-        #Finchè non detecto il landing pad [ TODO o finche non sono alla fine della landing region --> use backward]
+    
         s = LANDING_REGION_X+0.1
-        step = 0.3 #0.25
+        step = GRID_FORWARD_STEP
         setpoints = [s]
         for i in range(10):
             setpoints.append(s + i*step)
@@ -368,14 +333,13 @@ class Drone:
         i=0
         while True: # not self.detected:  
             print("starting lateral with dir: ", dir)
-            aa = self.lateral(setpoints[i], dir)
-            if aa != -1:
-                print("detected, fine grid search")
-                return aa
+            direction = self.lateral(setpoints[i], dir)
+            if direction != -1:
+                print("detected, finished grid search")
+                return direction
 
-            print("GS: sono arrivato al bordo")
+            print("GS: arrived to the setpoint")
             
-            # Save position before starting forward movements
             i += 1
             # Invert dir
             dir = -dir
@@ -389,14 +353,12 @@ class Drone:
                     self.position_commander.forward(DPOS)
                     if(self.detected):
                         return FORWARD
-                time.sleep(DTIME)
             
             while not (0.2 < self._y < FIELD_SIZE_Y-0.2):
                 self.position_commander.right(dir * DPOS)
                 if(self.detected):
                     return RIGHT if dir > 0 else LEFT
-                time.sleep(DTIME)
-            print("GS: ricomincio su nuovo setpoint: ", setpoints[i])
+            print("GS: go with next setpoint: ", setpoints[i])
 
     def backward(self):
         print("BACKWARD - start")
@@ -409,23 +371,20 @@ class Drone:
                 time.sleep(2.0)
                 detecting = True
 
-            # parte che resetta la modalita' di NON ostacolo
             sens = self._right if self._right < self._left else self._left
             if sens > LATERAL_SENSOR_THRESHOLD:
                 for _ in range(3):
                     self.position_commander.back(DPOS)
                     if self.detected and detecting:
                         return BACK
-                    time.sleep(DTIME)
                 lat_obstacle = False
 
-            # Parte che va al centro se non sono al centro
+            # Going towards center
             if abs(self._y - self.home_position[1]) > 0.1 and not lat_obstacle and myflag<=0:
                 print("Moving towards the center")
                 dir = np.sign(self._y - self.home_position[1])
                 while np.abs(self._y - self.home_position[1]) > 0.1:
-                    #print("differenza dal centro", abs(self._y - self.home_position[1]))
-                    #print("y", self._y)
+
                     sens = self._right if dir > 0 else self._left
                     if sens < LATERAL_SENSOR_THRESHOLD:
                         print("Detected lateral obstacle, just go forward")
@@ -434,14 +393,13 @@ class Drone:
                     self.position_commander.right(dir * DPOS)
                     if self.detected and detecting:
                         return RIGHT if dir == 1 else LEFT
-                    time.sleep(DTIME)
                 
 
-            # Parte per obstacle avoidance
+            # Oobstacle avoidance
             if self._back< FRONT_SENSOR_THRESHOLD:
                 print("Obstacle detected in front")
 
-                dir = np.sign(self._y - self.home_position[1])  # 1 towards the right, -1 towards the left
+                dir = np.sign(self._y - self.home_position[1])
                 print("Going right" if dir > 0 else "Going left")
 
                 while self._back < FRONT_SENSOR_THRESHOLD:
@@ -454,8 +412,6 @@ class Drone:
                     self.position_commander.right(dir * DPOS)
                     if self.detected and detecting:
                         return RIGHT if dir == 1 else LEFT
-                    time.sleep(DTIME)
-                    # print("differenza dal centro", abs(self._y - self.home_position[1]))
                 myflag=70
                 
                 print("Obstacle in front not detected anymore, moving a little bit more")
@@ -463,19 +419,16 @@ class Drone:
                     self.position_commander.right(dir * DPOS)
                     if self.detected and detecting:
                         return RIGHT if dir == 1 else LEFT
-                    time.sleep(DTIME)
-            # Parte che va a dritto se non e' ostacolo e se sono al centro
             else:
-                # prdifferenzint("differenza dal centro", abs(self._y - self.home_position[1]))
                 myflag-=1
 
                 if self._left < 0.1:
-                    print("correzione in forward - going right")
+                    print("Correction in forward - going right")
                     self.position_commander.right(DPOS)
                     if self.detected and detecting:
                         return RIGHT
                 elif self._right < 0.1:
-                    print("correzione in forward - going left")
+                    print("Correction in forward - going left")
                     self.position_commander.left(DPOS)
                     if self.detected and detecting:
                         return LEFT
@@ -483,7 +436,6 @@ class Drone:
                 self.position_commander.back(DPOS)
                 if self.detected and detecting:
                     return BACK
-                time.sleep(DTIME)
         print("BACKWARD - finished")
         return -1
     
@@ -497,19 +449,18 @@ class Drone:
                 dist += 8
     
     def movement_spiral(self, dir, dist):
-        if dir == 0:
+        if dir == FORWARD:
             func = self.position_commander.forward
-        elif dir == 1:
+        elif dir == LEFT:
             func = self.position_commander.left
-        elif dir == 2:
+        elif dir == BACK:
             func = self.position_commander.back
-        elif dir == 3:
+        elif dir == RIGHT:
             func = self.position_commander.right
         for _ in range(dist):
             func(DPOS)
             if self.detected:
                 return True
-            time.sleep(DTIME)
         return False
 
     def _connected(self, URI):
@@ -537,13 +488,9 @@ class Drone:
         lmeas = LogConfig(name='Meas', period_in_ms=10)
         lmeas.add_variable('range.front')
         lmeas.add_variable('range.back')
-        lmeas.add_variable('range.up')
         lmeas.add_variable('range.left')
         lmeas.add_variable('range.right')
         lmeas.add_variable('range.zrange')
-        lmeas.add_variable('stabilizer.roll')
-        lmeas.add_variable('stabilizer.pitch')
-        lmeas.add_variable('stabilizer.yaw')
 
         try:
             self._scf.cf.log.add_config(lmeas)
@@ -561,7 +508,6 @@ class Drone:
         return 
     
     def meas_data(self, timestamp, data, logconf):
-        self._up     = self._convert_log_to_distance(data['range.up'])
         self._front  = self._convert_log_to_distance(data['range.front'])
         self._back   = self._convert_log_to_distance(data['range.back'])
         self._left   = self._convert_log_to_distance(data['range.left'])
