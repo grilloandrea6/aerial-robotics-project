@@ -9,13 +9,13 @@ import numpy as np
 
 if __name__ == '__main__':    
 
-    uri_ = 'radio://0/37/2M/E7E7E70101'
+    uri_ = 'radio://0/99/1M/E7E7E70101'
 
     uri = uri_helper.uri_from_env(default=uri_)
     cflib.crtp.init_drivers()
 
     # Define the home position (X,Y) of take off pad
-    home = np.array([0.4,1.70])
+    home = np.array([0.84,2.25])
 
 
     # Run control

@@ -49,6 +49,9 @@ class Drone:
         self.init_detection()
         self._init_logging()
 
+        self.image_index = 0
+        self.print_map = np.zeros((int(MAX_X/RES_POS), int(MAX_Y/RES_POS)))
+
         print("Init drone - finished")
 
     def run(self):
@@ -56,45 +59,44 @@ class Drone:
         self.position_commander = MotionCommander(self._scf, default_height=self.cruise_height)
         self.position_commander.take_off(velocity=10.0)
 
-        time.sleep(2.0)
-        
-
+        time.sleep(1.0)
         print("before forward:", self._x, self._y)
-        time.sleep(0.1)
         self.forward()
     
         print("fine forward")
-        time.sleep(2.0)
+        time.sleep(.5)
         self.init_detection()
-        time.sleep(4.0)
+        time.sleep(2.0)
 
         direction = self.grid_search()
         print("fine grid: DIREZIONE: ", direction)
         self.cross(direction)
+        print("position before landing: ", self._x, self._y)
         self._x_off = self._x
         self._y_off = self._y
+        #self.home_position[0] = self.home_position[0] + 2.4
 
-        #self.position_commander.down(self.cruise_height/2)
+        self.position_commander.down(self.cruise_height/2)
         self.position_commander.land()
         time.sleep(1.0)
         self.position_commander.take_off(velocity=10.0)
-        
+        time.sleep(2.0)
+        print("position after landing: ", self._x, self._y)
         print("inizio back")
         direction = self.backward()
         print("fine back: DIREZIONE: ", direction)
         time.sleep(1.0)
         if direction == -1:
             direction = self.spiral()
+            print("position before spiral: ", self._x, self._y)
             print("fine spiral: DIREZIONE: ", direction)
-
+        print("position before cross: ", self._x, self._y)
         self.cross(direction)
 
-        #self.position_commander.down(self.cruise_height/2)
+        self.position_commander.down(self.cruise_height/2)
         self.position_commander.land()
 
         print("Drone run - finished")
-
- 
 
 
     def landing_pad_detected(self):
@@ -125,6 +127,22 @@ class Drone:
         elif self.cross_active:
             x, y = self.point_to_map_cell(self._x, self._y)
             self.map[x, y] = 0
+
+
+        # # if self.cross_active and self.image_index % 80 == 0:
+        # #     plt.imshow(np.flip(self.map, 1), cmap='viridis', origin='lower')
+        # #     plt.savefig("./cross_map/file%05d.png" % (self.image_index/10))
+        # #     plt.close()
+
+
+        # x, y = self.point_to_map_cell(self._x, self._y)
+        # self.print_map[x, y] = 1
+        # if self.image_index % 100 == 0:
+        #     plt.imshow(np.flip(self.print_map, 1), cmap='viridis', origin='lower')
+        #     plt.savefig("./images/file%05d.png" % (self.image_index/10))
+        #     plt.close()
+
+        # self.image_index += 1
         
 
     def init_detection(self):
@@ -149,12 +167,15 @@ class Drone:
         time.sleep(DTIME)
         
     def point_to_map_cell(self, x, y):
+        # idx_x = int((x + 1.0) / RES_POS) 
+        # idx_y = int((y + 1.0) / RES_POS)
         idx_x = int(x / RES_POS) 
         idx_y = int(y / RES_POS)
 
         return idx_x, idx_y
     
     def map_cell_to_point(self, cell_x, cell_y):
+        #return ((cell_x + 0.5)*RES_POS - 1.0, (cell_y + 0.5)*RES_POS - 1.0)
         return ((cell_x + 0.5)*RES_POS, (cell_y + 0.5)*RES_POS)
 
     def cross(self, direction):
@@ -202,11 +223,6 @@ class Drone:
             self.position_commander.move_distance(mean_x - self._x, mean_y - self._y, 0.0)
             time.sleep(0.2)
         print("FINAL - actual position: ", self._x, self._y)
-        plt.imshow(self.map, cmap='gray', origin='lower')
-        plt.savefig("map.png")
-        plt.close()
-
-        
         
         return
             
@@ -230,7 +246,7 @@ class Drone:
                     time.sleep(DTIME)
                 
                 print("Obstacle in front not detected anymore, moving a little bit more")
-                for _ in range(3):
+                for _ in range(10):
                     self.position_commander.right(dir * DPOS)
                     time.sleep(DTIME)
 
@@ -388,7 +404,7 @@ class Drone:
         myflag = 0
         detecting = False
         while self._x > self.home_position[0] or abs(self._y - self.home_position[1]) > 0.05:
-            if self._x - self.home_position[0] < 1.0:
+            if not detecting and self._x - self.home_position[0] < 1.0:
                 self.init_detection()
                 time.sleep(2.0)
                 detecting = True
